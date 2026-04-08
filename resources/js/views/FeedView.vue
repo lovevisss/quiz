@@ -27,11 +27,12 @@ function showMessage() {
         <p>Output raw html : <span v-html="rawHtml"></span></p>
         <p>{{ rawHtml }}</p>
 
-        <button :disabled="disabled" class="disabled:text-gray-600">Click me</button>
+        <button :disabled="disabled" class="disabled:text-gray-600">
+            Click me
+        </button>
 
         <p>{{ number + 1 }}</p>
         <p>{{ isOk ? 'YES' : 'NO' }}</p>
         <a href="" v-on:[eventName]="showMessage">{{ eventName }}</a>
     </div>
 </template>
-

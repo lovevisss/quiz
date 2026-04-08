@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Post;
+use App\Models\Role;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -16,11 +17,23 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $user = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $roles = [
+            ['name' => 'Admin', 'slug' => 'admin'],
+            ['name' => 'Editor', 'slug' => 'editor'],
+            ['name' => 'User', 'slug' => 'user'],
+        ];
 
-        Post::factory()->count(12)->for($user)->create();
+        foreach ($roles as $role) {
+            Role::query()->firstOrCreate(['slug' => $role['slug']], $role);
+        }
+
+        $user = User::query()->firstOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User', 'password' => 'password'],
+        );
+
+        if (! Post::query()->exists()) {
+            Post::factory()->count(12)->for($user)->create();
+        }
     }
 }

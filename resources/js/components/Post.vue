@@ -31,13 +31,11 @@
         <div class="flex justify-between gap-4 px-4 py-2 text-sm text-gray-500">
             <p>1.2K Likes</p>
             <p>300 Comments</p>
-
-
         </div>
 
         <div class="m-4 flex justify-between">
             <button
-                class="flex w-full justify-center gap-1 rounded-lg text-sm hover:bg-gray-400 py-4"
+                class="flex w-full justify-center gap-1 rounded-lg py-4 text-sm hover:bg-gray-400"
             >
                 <svg
                     width="16"
@@ -59,7 +57,7 @@
                 <p>Like</p>
             </button>
             <button
-                class="flex w-full justify-center gap-1 rounded-lg text-sm hover:bg-gray-400 py-4"
+                class="flex w-full justify-center gap-1 rounded-lg py-4 text-sm hover:bg-gray-400"
             >
                 <svg
                     width="16"

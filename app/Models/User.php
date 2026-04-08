@@ -4,10 +4,12 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
@@ -57,5 +59,47 @@ class User extends Authenticatable
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
+    }
+
+    /**
+     * @return BelongsToMany<Role, User>
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class);
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->roles()
+            ->where(function ($query) use ($role): void {
+                $query->where('name', $role)
+                    ->orWhere('slug', $role);
+            })
+            ->exists();
+    }
+
+    public function assignRole(string $role): void
+    {
+        $roleModel = Role::query()
+            ->where('name', $role)
+            ->orWhere('slug', $role)
+            ->firstOrFail();
+
+        $this->roles()->syncWithoutDetaching([$roleModel->id]);
+    }
+
+    public function removeRole(string $role): void
+    {
+        $roleModel = Role::query()
+            ->where('name', $role)
+            ->orWhere('slug', $role)
+            ->first();
+
+        if (! $roleModel) {
+            throw (new ModelNotFoundException())->setModel(Role::class, [$role]);
+        }
+
+        $this->roles()->detach($roleModel->id);
     }
 }

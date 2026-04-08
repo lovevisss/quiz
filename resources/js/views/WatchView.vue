@@ -4,4 +4,3 @@
         <p class="text-sm text-slate-600">Watch page routed by Vue Router.</p>
     </div>
 </template>
-

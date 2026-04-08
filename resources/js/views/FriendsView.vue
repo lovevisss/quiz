@@ -4,4 +4,3 @@
         <p class="text-sm text-slate-600">Friends page routed by Vue Router.</p>
     </div>
 </template>
-

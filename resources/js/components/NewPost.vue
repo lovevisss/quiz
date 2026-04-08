@@ -10,16 +10,18 @@
                     class="h-8 w-8 rounded-full object-cover"
                 />
             </div>
-            <div class="flex-1 mx-4">
+            <div class="mx-4 flex-1">
                 <input
                     type="text"
                     name="body"
-                    class="h-8 w-full bg-gray-200 pl-4 rounded-full focus:outline-none focus:shadow text-sm"
+                    class="h-8 w-full rounded-full bg-gray-200 pl-4 text-sm focus:shadow focus:outline-none"
                     placeholder="add a post"
                 />
             </div>
             <div>
-                <button class="flex justify-center items-center rounded-full h-10 w-10 bg-gray-200">
+                <button
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200"
+                >
                     <svg
                         width="20"
                         height="20"
