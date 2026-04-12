@@ -11,9 +11,7 @@ class UserController extends Controller
 {
     public function authUser(Request $request): UserResource
     {
-        $user = $request->user();
-
-        return new UserResource($user, 'auth');
+        return new UserResource($request->user(), 'auth');
     }
 
     public function show(User $user): UserResource

@@ -20,6 +20,15 @@ class UserResource extends JsonResource
         $user = $this->resource;
 
         if ($this->context === 'auth') {
+            if ($user === null) {
+                return [
+                    'data' => null,
+                    'links' => [
+                        'self' => null,
+                    ],
+                ];
+            }
+
             return [
                 'data' => [
                     'attributes' => [

@@ -19,5 +19,6 @@ Route::inertia('/index', 'Index')->name('index');
 Route::inertia('/friends', 'Index')->name('friends');
 Route::inertia('/watch', 'Index')->name('watch');
 Route::get('/apis/posts', [PostController::class, 'legacyIndex'])->name('apis.posts.index');
-
+Route::post('api/friend-requests', [\App\Http\Controllers\Api\FriendRequestController::class, 'store'])->name('api.friend-requests.store');
+Route::post('api/friend-requests/{user}/accept', [\App\Http\Controllers\Api\FriendRequestController::class, 'accept'])->name('api.friend-requests.accept');
 require __DIR__.'/settings.php';

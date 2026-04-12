@@ -102,4 +102,9 @@ class User extends Authenticatable
 
         $this->roles()->detach($roleModel->id);
     }
+
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friends', 'friend_id', 'user_id');
+    }
 }

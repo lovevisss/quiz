@@ -9,7 +9,7 @@ type AuthUser = {
 };
 
 type AuthUserResponse = {
-    data: {
+    data: null | {
         attributes: AuthUser;
     };
 };
@@ -19,9 +19,9 @@ const authUser = ref<AuthUser | null>(null);
 async function fetchAuthUser() {
     try {
         const response = await axios.get<AuthUserResponse>('/api/auth/user');
-        authUser.value = response.data.data.attributes;
-    } catch (error) {
-        console.error('Failed to fetch auth user', error);
+        authUser.value = response.data.data?.attributes ?? null;
+    } catch {
+        authUser.value = null;
     }
 }
 

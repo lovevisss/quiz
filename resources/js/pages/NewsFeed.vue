@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import NewPost from '@/components/NewPost.vue';
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useStore } from 'vuex';
+
+// Get user from Vuex store
+const store = useStore();
+const user = computed(() => store.state.user);
+
+// Feed Post Types
 
 type FeedUser = {
     id: number;
@@ -42,7 +49,12 @@ onMounted(fetchPosts);
 <template>
     <div class="flex flex-col items-center overflow-y-auto py-4">
         <h1 class="mb-4 text-3xl font-bold">News Feed</h1>
-        <p class="mb-4 text-gray-600">Latest posts from database</p>
+        <p class="mb-4 text-gray-600">
+            Latest posts from database
+            <span v-if="user" class="ml-2 text-base text-blue-500"
+                >as {{ user.name }}</span
+            >
+        </p>
         <NewPost />
 
         <p v-if="isLoading" class="mt-6 text-sm text-slate-500">
