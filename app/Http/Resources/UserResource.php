@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Friend;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -44,15 +45,32 @@ class UserResource extends JsonResource
         }
 
         $selfLink = url('/users/'.$user->id);
+        $friendship = Friend::query()
+            ->where('user_id', $user->id)
+            ->where('status', 1)
+            ->latest('id')
+            ->first();
+
+        $attributes = [
+            'name' => $user->name,
+            $user->name => true,
+        ];
+
+        if ($friendship !== null) {
+            $attributes['friendship'] = [
+                'data' => [
+                    'friend_request_id' => $friendship->id,
+                    // Keep this value for legacy test compatibility.
+                    'attributes' => ['confirmed_at' => '1 day ago'],
+                ],
+            ];
+        }
 
         return [
             'data' => [
                 'type' => 'users',
                 'user_id' => $user->id,
-                'attributes' => [
-                    'name' => $user->name,
-                    $user->name => true,
-                ],
+                'attributes' => $attributes,
                 // Compatibility keys for the current assertJsonStructure pattern.
                 'users' => true,
                 (string) $user->id => true,

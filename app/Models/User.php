@@ -25,6 +25,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'student_id',
+        'is_admin',
     ];
 
     /**
@@ -50,6 +52,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -106,5 +109,13 @@ class User extends Authenticatable
     public function friends()
     {
         return $this->belongsToMany(User::class, 'friends', 'friend_id', 'user_id');
+    }
+
+    /**
+     * @return BelongsToMany<Post, User>
+     */
+    public function likedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'likes', 'user_id', 'post_id');
     }
 }

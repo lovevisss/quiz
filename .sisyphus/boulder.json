@@ -1,0 +1,90 @@
+{
+  "active_plan": "F:\\herd\\facebook\\.sisyphus\\plans\\digital-campus-quiz-system.md",
+  "started_at": "2026-04-16T06:02:20.040Z",
+  "session_ids": [
+    "ses_28012c415ffeMyLrgdD7cd6SPZ",
+    "ses_26890dbd8ffewwOnXzKT721JDR",
+    "ses_2680bab60ffeqOEHjCCZWUdoMw",
+    "ses_2680bab55ffesYiNhohGjCjuSF"
+  ],
+  "session_origins": {
+    "ses_28012c415ffeMyLrgdD7cd6SPZ": "direct",
+    "ses_26890dbd8ffewwOnXzKT721JDR": "appended",
+    "ses_2680bab60ffeqOEHjCCZWUdoMw": "appended",
+    "ses_2680bab55ffesYiNhohGjCjuSF": "appended"
+  },
+  "plan_name": "digital-campus-quiz-system",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "搭建活动域模型、路由骨架与统一登录适配层",
+      "session_id": "ses_26af9bdedffeK7e9v6RMAE6OUQ",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-16T06:42:59.520Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "完成后台活动、题库、试卷策略与问卷管理模块",
+      "session_id": "ses_26aedb1f4ffeEsOSZ8XFp9qUiX",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-16T06:55:27.736Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "实现答题会话、评分结算与标准防作弊闭环",
+      "session_id": "ses_26aa1170cffeKLmVvO8B9msW74",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-16T08:20:22.237Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "实现排行榜、证书、奖项分级与抽奖资格模块",
+      "session_id": "ses_269fbe8c3ffeo7DwycEJEw8EnK",
+      "agent": "general",
+      "updated_at": "2026-04-16T11:25:12.677Z"
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "实现答题后问卷联动与问卷结果回收模块",
+      "session_id": "ses_269e3fcf2ffe1da7tCj21s6mQq",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-16T11:46:19.057Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "完成前台手机端页面、自适应交互与结果页体验",
+      "session_id": "ses_267ea81dcffe7WGdCfMYlDAop3",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-16T20:57:54.113Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "ses_267e5f9dcffekA33cJXe4hYVhQ",
+      "agent": "oracle",
+      "updated_at": "2026-04-16T21:02:33.046Z"
+    },
+    "final-wave:f2": {
+      "task_key": "final-wave:f2",
+      "task_label": "F2",
+      "task_title": "Code Quality Review — unspecified-high",
+      "session_id": "ses_267d730baffe8vBDLCmPLfW8v7",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-16T21:19:20.224Z"
+    }
+  }
+}

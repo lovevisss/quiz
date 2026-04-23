@@ -1,0 +1,18 @@
+2026-04-17 04:54
+
+Commands executed:
+- npm run build
+- npx playwright test tests/e2e/quiz-flow.spec.ts --project="iPhone 12" --reporter=line
+- npx playwright test tests/e2e/quiz-flow.spec.ts --project="Pixel 7" --reporter=line
+
+[iPhone 12]
+1 failed: quiz flow › renders activity, question, result, leaderboard, and certificate pages (timeout waiting for [data-testid="activity-home"])
+1 passed: quiz flow › keeps fixed actions visible on mobile viewports
+
+[Pixel 7]
+1 failed: quiz flow › renders activity, question, result, leaderboard, and certificate pages (timeout waiting for [data-testid="activity-home"])
+1 passed: quiz flow › keeps fixed actions visible on mobile viewports
+
+Root cause/fix: Removed public/hot before Playwright webServer to force built assets and avoid dev-server blank page interference.
+
+FINAL RESULT: PARTIAL PASS (blank page fixed, but main selector not visible in time)

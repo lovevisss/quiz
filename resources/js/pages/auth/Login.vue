@@ -33,6 +33,8 @@ defineProps<{
             {{ status }}
         </div>
 
+        <InputError :message="$page.props.errors.cas" class="mb-4" />
+
         <Form
             v-bind="store.form()"
             :reset-on-success="['password']"
@@ -95,6 +97,9 @@ defineProps<{
                 >
                     <Spinner v-if="processing" />
                     Log in
+                </Button>
+                <Button type="button" variant="outline" class="w-full" as-child>
+                    <a href="/auth/cas/redirect">Sign in with Campus CAS</a>
                 </Button>
             </div>
 

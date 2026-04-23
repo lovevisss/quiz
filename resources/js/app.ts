@@ -20,8 +20,11 @@ createInertiaApp({
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.vue`,
-            import.meta.glob<DefineComponent>('./pages/**/*.vue'),
-        ),
+            import.meta.glob('./pages/**/*.vue'),
+        ).then((component) => {
+            console.log(`Client Resolved component: ${name}`);
+            return component as DefineComponent;
+        }),
     setup({ el, App, props, plugin }) {
         const vueApp = createApp({ render: () => h(App, props) })
             .use(plugin)
@@ -29,7 +32,9 @@ createInertiaApp({
             .use(store);
 
         // Hydrate user on app boot via API
-        store.dispatch('fetchUser');
+        store.dispatch('fetchUser').catch((err) => {
+            console.error('Failed to fetch user during app boot:', err);
+        });
         vueApp.mount(el);
     },
     progress: {

@@ -75,6 +75,12 @@ onMounted(fetchAuthUser);
                 active-class="text-blue-600"
                 >Watch</RouterLink
             >
+            <RouterLink
+                to="/quiz"
+                class="text-slate-700 hover:text-blue-600"
+                active-class="text-blue-600"
+                >Quiz</RouterLink
+            >
         </div>
 
         <div

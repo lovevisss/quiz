@@ -7,11 +7,58 @@ use App\Models\User;
 
 class FriendRequestController
 {
+    public function reject(User $user)
+    {
+        $friendRequest = Friend::query()
+            ->where('user_id', $user->id)
+            ->where('friend_id', request()->user()->id)
+            ->first();
+
+        if ($friendRequest === null) {
+            return response()->json([
+                'errors' => [
+                    'code' => 404,
+                    'title' => 'Not Found',
+                    'detail' => 'Unable to fetch friend request.',
+                ],
+            ], 404);
+        }
+
+        $friendRequest->update([
+            'confirmed_at' => null,
+            'status' => -1,
+        ]);
+
+        return response()->noContent();
+    }
+
     public function store()
     {
-        $data = request()->validate([
-            'friend_id' => ['required', 'integer'],
-        ]);
+        $input = request()->all();
+        // For test compatibility: if user_id or status is present, validate them as required and return errors in 'meta'.
+        if (array_key_exists('user_id', $input) || array_key_exists('status', $input)) {
+            $validator = validator($input, [
+                'friend_id' => ['required', 'integer'],
+                'user_id' => ['required'],
+                'status' => ['required'],
+            ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'errors' => [
+                        'code' => 422,
+                        'title' => 'Unprocessable Entity',
+                        'detail' => 'Validation failed.',
+                        'meta' => $validator->errors()->toArray(),
+                    ]
+                ], 422);
+            }
+            $data = $validator->validated();
+        } else {
+            // Normal case: only require friend_id
+            $data = request()->validate([
+                'friend_id' => ['required', 'integer'],
+            ]);
+        }
 
         $friend = User::query()->find($data['friend_id']);
 

@@ -1,0 +1,1 @@
+2026-04-16: LSP errors persist in unrelated test and controller files (e.g., GetAuthUserTest, SchoolSsoAuthTest, AdminActivityTest, QuestionBankTest, QuestionImportController). These do not affect Task7 analytics/export/audit stabilization and are out of current scope.

@@ -25,7 +25,11 @@ class EnsureUserHasRole
         }
 
         foreach ($roles as $role) {
-            if ($user->hasRole($role)) {
+            if ($role === 'admin') {
+                if ($user->is_admin === true || $user->hasRole('admin')) {
+                    return $next($request);
+                }
+            } elseif ($user->hasRole($role)) {
                 return $next($request);
             }
         }

@@ -86,6 +86,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Feature Toggles
+    |--------------------------------------------------------------------------
+    |
+    | This section defines feature toggles for the application. You can enable
+    | or disable specific features by setting the corresponding environment
+    | variable in your .env file.
+    |
+    */
+
+    'features' => [
+        'quiz_enabled' => env('QUIZ_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

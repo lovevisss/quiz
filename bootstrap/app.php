@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(fn ($schedule) => [
+        $schedule->command('leaderboard:refresh')->hourly(),
+        $schedule->command('leaderboard:cleanup')->dailyAt('02:00'),
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureUserHasRole::class,

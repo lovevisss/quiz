@@ -88,7 +88,21 @@ return [
                 'deferred',
             ],
         ],
+    ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Monitoring Thresholds
+    |--------------------------------------------------------------------------
+    |
+    | This section defines monitoring thresholds for the queue system. You can
+    | configure the maximum number of jobs allowed in the queue before alerts
+    | are triggered.
+    |
+    */
+
+    'monitoring' => [
+        'max_jobs' => env('QUEUE_MAX_JOBS', 1000),
     ],
 
     /*

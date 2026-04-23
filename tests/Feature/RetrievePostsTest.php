@@ -1,6 +1,7 @@
 <?php
 namespace Tests\Feature;
 
+use App\Models\Friend;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,9 +13,19 @@ class RetrievePostsTest extends TestCase
     public function test_retrieving_posts()
     {
         $this->actingAs($user = User::factory()->create(), 'api');
+        $anotherUser = User::factory()->create();
+
         $posts = Post::factory()->count(2)->create([
-            'user_id' => $user->id,
+            'user_id' => $anotherUser->id,
                 ]
+        );
+        Friend::create(
+            [
+                'user_id' => $user->id,
+                'friend_id' => $anotherUser->id,
+                'confirmed_at' => now(),
+                'status' => 1
+            ]
         );
         $response = $this->get('/apis/posts');
         $response->assertStatus(200);
@@ -45,6 +56,8 @@ class RetrievePostsTest extends TestCase
             ]
         ]);
     }
+
+
 
     public function test_a_user_can_view_user_profiles()
     {

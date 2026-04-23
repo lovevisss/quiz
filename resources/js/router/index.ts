@@ -1,7 +1,6 @@
 import {
     createMemoryHistory,
     createRouter,
-    createWebHistory,
     type RouteRecordRaw,
 } from 'vue-router';
 
@@ -9,8 +8,38 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/index',
         name: 'index.home',
-        component: () => import('@/pages/NewsFeed.vue'),
+        component: () => import('../pages/NewsFeed.vue'),
         meta: { title: 'News Feed' },
+    },
+    {
+        path: '/quiz',
+        name: 'quiz.home',
+        component: () => import('../pages/Quiz/ActivityHome.vue'),
+        meta: { title: 'Activity Home' },
+    },
+    {
+        path: '/quiz/question',
+        name: 'quiz.question',
+        component: () => import('../pages/Quiz/Question.vue'),
+        meta: { title: 'Quiz Question' },
+    },
+    {
+        path: '/quiz/result',
+        name: 'quiz.result',
+        component: () => import('../pages/Quiz/Result.vue'),
+        meta: { title: 'Quiz Result' },
+    },
+    {
+        path: '/quiz/leaderboard',
+        name: 'quiz.leaderboard',
+        component: () => import('../pages/Quiz/Leaderboard.vue'),
+        meta: { title: 'Leaderboard' },
+    },
+    {
+        path: '/quiz/certificate',
+        name: 'quiz.certificate',
+        component: () => import('../pages/Quiz/Certificate.vue'),
+        meta: { title: 'Certificate' },
     },
     {
         path: '/friends',
@@ -33,7 +62,7 @@ const routes: RouteRecordRaw[] = [
 
 export function createClientRouter() {
     const router = createRouter({
-        history: createWebHistory(),
+        history: createMemoryHistory(),
         routes,
     });
 

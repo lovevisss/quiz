@@ -11,10 +11,14 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import adminActivities from '@/routes/admin/activities';
+import adminPaperStrategies from '@/routes/admin/paper_strategies';
+import adminQuestions from '@/routes/admin/questions';
+import quizRoutes from '@/routes/quiz';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, Folder, LayoutGrid, ListChecks, ScrollText } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +26,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Quiz',
+        href: quizRoutes.index(),
+        icon: ClipboardList,
+    },
+    {
+        title: 'Activities',
+        href: adminActivities.index(),
+        icon: ListChecks,
+    },
+    {
+        title: 'Questions',
+        href: adminQuestions.index(),
+        icon: BookOpen,
+    },
+    {
+        title: 'Paper Strategies',
+        href: adminPaperStrategies.index(),
+        icon: ScrollText,
     },
 ];
 

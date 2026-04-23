@@ -1,0 +1,14 @@
+# Task 9 Release Ops Evidence
+
+## php artisan schedule:list
+0 * * * *  php artisan leaderboard:refresh ........................................... Next Due: 29 minutes from now
+0 2 * * *  php artisan leaderboard:cleanup .............................................. Next Due: 7 hours from now
+
+## php artisan queue:work --once
+resolveConsoleSchedule invokedSchedule object initializedTasks registered: []
+
+## npm run build
+vite v7.1.9 building for production...
+[plugin @laravel/vite-plugin-wayfinder] Types generated for actions, routes, form variants
+✓ 3187 modules transformed.
+✓ built in 4.85s

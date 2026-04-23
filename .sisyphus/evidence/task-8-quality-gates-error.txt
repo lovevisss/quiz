@@ -1,0 +1,8 @@
+[2026-04-16 14:13] Task 8 gate command errors:
+
+- vendor/bin/pint: Not found (CommandNotFoundException)
+- npm run lint: 10 errors (missing <script lang> in Vue files, unused vars in profile.js)
+- composer test: 6 failed (RouteNotFoundException for admin.survey_templates.questions.* and assertSee failure for SurveyTemplateTest)
+- Playwright: npm install fails due to missing package plain-crypto-js@4.2.1 (404 from npm registry)
+
+Playwright cannot be installed or executed until this dependency is resolved. All other gates attempted and outputs captured.

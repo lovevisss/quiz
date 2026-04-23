@@ -9,6 +9,8 @@
     ],
     "license": "MIT",
     "require": {
+        "ext-simplexml": "*",
+        "ext-zip": "*",
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/fortify": "^1.30",

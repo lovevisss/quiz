@@ -13,11 +13,14 @@ createServer(
             page,
             render: renderToString,
             title: (title) => (title ? `${title} - ${appName}` : appName),
-            resolve: (name) =>
-                resolvePageComponent(
+            resolve: (name) => {
+                const resolvedComponent = resolvePageComponent(
                     `./pages/${name}.vue`,
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
-                ),
+                );
+                console.log(`SSR Resolved component: ${name}`);
+                return resolvedComponent;
+            },
             setup: async ({ App, props, plugin }) => {
                 const router = createServerRouter();
                 const app = createSSRApp({ render: () => h(App, props) })

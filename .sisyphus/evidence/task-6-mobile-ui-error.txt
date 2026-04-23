@@ -1,0 +1,1 @@
+Both iPhone 12 and Pixel 7 Playwright tests failed with timeout waiting for mobile DOM testids/links. APP_URL was set in webServer command, but the tests did not pass. See task-6-mobile-ui.txt for details.

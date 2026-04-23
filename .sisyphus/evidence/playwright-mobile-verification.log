@@ -1,0 +1,15 @@
+2026-04-16
+
+Attempted mobile viewport verification for:
+- /quiz
+- /quiz/question
+- /quiz/result
+- /quiz/leaderboard
+- /quiz/certificate
+
+Result:
+- Playwright MCP session was unavailable in this conversation after the background analysis completed.
+- Browser checks could not be executed, so no screenshots were captured.
+
+Observed mitigation:
+- Adjusted quiz shell scrolling so fixed/sticky action zones are not clipped by the outer layout.
