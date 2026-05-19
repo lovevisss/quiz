@@ -38,13 +38,30 @@
                     </p>
                 </div>
 
-                <div>
-                    <label class="mb-1 block text-sm font-medium">标签（逗号分隔）</label>
-                    <input
-                        v-model="form.tagsText"
-                        class="w-full rounded border px-3 py-2"
-                        placeholder="math,history"
-                    />
+                <div class="md:col-span-2">
+                    <div class="mb-1 flex items-center justify-between gap-3">
+                        <label class="block text-sm font-medium">题目标签</label>
+                        <a href="/admin/question-tags" class="text-sm text-blue-600 underline">管理标签</a>
+                    </div>
+
+                    <div v-if="availableTags.length > 0" class="flex flex-wrap gap-2 rounded border border-slate-200 bg-slate-50 p-3">
+                        <label
+                            v-for="tag in availableTags"
+                            :key="tag.id"
+                            class="cursor-pointer"
+                        >
+                            <input v-model="form.tags" type="checkbox" :value="tag.name" class="peer sr-only" />
+                            <span class="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 transition peer-checked:border-sky-600 peer-checked:bg-sky-600 peer-checked:text-white">
+                                {{ tag.name }}
+                            </span>
+                        </label>
+                    </div>
+                    <div v-else class="rounded border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                        暂无可选标签，请先前往“管理标签”页面添加。
+                    </div>
+                    <p v-if="form.errors.tags" class="mt-1 text-sm text-red-600">
+                        {{ form.errors.tags }}
+                    </p>
                 </div>
 
                 <div>
@@ -144,6 +161,8 @@
                             <th class="border px-3 py-2 text-left">选项</th>
                             <th class="border px-3 py-2 text-left">答案</th>
                             <th class="border px-3 py-2 text-left">标签</th>
+                            <th class="border px-3 py-2 text-left">评价统计</th>
+                            <th class="border px-3 py-2 text-left">纠错反馈</th>
                             <th class="border px-3 py-2 text-left">操作</th>
                         </tr>
                     </thead>
@@ -155,6 +174,28 @@
                             <td class="border px-3 py-2">{{ formatOptions(question.options) }}</td>
                             <td class="border px-3 py-2">{{ question.answer || '-' }}</td>
                             <td class="border px-3 py-2">{{ formatTags(question.tags) }}</td>
+                            <td class="border px-3 py-2 text-xs text-slate-600">
+                                <div>喜欢：{{ question.likes_count ?? 0 }}</div>
+                                <div>不喜欢：{{ question.dislikes_count ?? 0 }}</div>
+                            </td>
+                            <td class="border px-3 py-2 text-xs text-slate-600">
+                                <div v-if="question.feedback?.length > 0" class="space-y-2">
+                                    <div
+                                        v-for="feedback in question.feedback"
+                                        :key="feedback.id"
+                                        class="rounded border border-amber-200 bg-amber-50 p-2"
+                                    >
+                                        <p class="font-medium text-slate-700">
+                                            {{ feedback.user?.name || `用户 #${feedback.user_id}` }}
+                                        </p>
+                                        <p class="mt-1">{{ feedback.correction_text }}</p>
+                                        <p class="mt-1 text-[11px] text-slate-500">
+                                            状态：{{ feedback.correction_status || 'pending' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span v-else>-</span>
+                            </td>
                             <td class="border px-3 py-2">
                                 <button
                                     type="button"
@@ -196,11 +237,30 @@ type QuestionItem = {
     option_explanations: Record<string, string> | null;
     tags: string[] | null;
     difficulty: number;
+    likes_count?: number;
+    dislikes_count?: number;
+    feedback: Array<{
+        id: number;
+        user_id: number;
+        correction_text: string | null;
+        correction_status: string | null;
+        user?: {
+            name?: string | null;
+        } | null;
+    }>;
+};
+
+type TagOption = {
+    id: number;
+    name: string;
 };
 
 const page = usePage();
 const questions = computed(
     () => (page.props.questions as QuestionItem[] | undefined) ?? [],
+);
+const availableTags = computed(
+    () => (page.props.availableTags as TagOption[] | undefined) ?? [],
 );
 const deletingId = ref<number | null>(null);
 const editingId = ref<number | null>(null);
@@ -215,7 +275,7 @@ const form = useForm({
     type: 'single',
     optionsText: '',
     answer: '',
-    tagsText: '',
+    tags: [] as string[],
     explanation: '',
     difficulty: 1,
 });
@@ -225,6 +285,8 @@ const optionsError = computed(() => {
 });
 
 function submit(): void {
+    const normalizedTags = Array.from(new Set(form.tags.map((tag) => tag.trim()).filter(Boolean)));
+
     const payload = {
         content: form.content,
         type: form.type,
@@ -232,9 +294,7 @@ function submit(): void {
         options: form.optionsText
             ? form.optionsText.split(',').map((s) => s.trim()).filter(Boolean)
             : [],
-        tags: form.tagsText
-            ? form.tagsText.split(',').map((s) => s.trim()).filter(Boolean)
-            : [],
+        tags: normalizedTags,
         explanation: form.explanation || null,
         difficulty: Number(form.difficulty) || 1,
     };
@@ -257,6 +317,7 @@ function submit(): void {
         onSuccess: () => {
             form.reset();
             form.type = 'single';
+            form.tags = [];
             form.difficulty = 1;
         },
     });
@@ -268,7 +329,7 @@ function edit(question: QuestionItem): void {
     form.type = question.type;
     form.answer = question.answer || '';
     form.optionsText = question.options?.join(', ') || '';
-    form.tagsText = question.tags?.join(', ') || '';
+    form.tags = [...(question.tags ?? [])];
     form.explanation = question.explanation || '';
     form.difficulty = question.difficulty || 1;
 }
@@ -277,6 +338,7 @@ function cancelEdit(): void {
     editingId.value = null;
     form.reset();
     form.type = 'single';
+    form.tags = [];
     form.difficulty = 1;
 }
 

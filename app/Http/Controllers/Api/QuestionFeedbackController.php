@@ -26,8 +26,15 @@ class QuestionFeedbackController extends Controller
             ],
         );
 
+        $question->loadCount([
+            'feedback as likes_count' => fn ($query) => $query->where('liked', true),
+            'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+        ]);
+
         return response()->json([
             'liked' => $feedback->liked,
+            'likes_count' => (int) ($question->likes_count ?? 0),
+            'dislikes_count' => (int) ($question->dislikes_count ?? 0),
         ]);
     }
 
@@ -49,7 +56,7 @@ class QuestionFeedbackController extends Controller
         );
 
         return response()->json([
-            'message' => 'Correction submitted.',
+            'message' => '纠错反馈已提交。',
         ], 201);
     }
 }

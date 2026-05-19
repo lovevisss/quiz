@@ -37,7 +37,7 @@ test.describe('quiz flow', () => {
         await expect(page.getByTestId('next-button')).toBeVisible();
 
         await page.goto('/quiz/result');
-        await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+        await expect(page.getByRole('button', { name: '重新获取' })).toBeVisible();
     });
 
     test('shows error on invalid quiz page', async ({ page }) => {

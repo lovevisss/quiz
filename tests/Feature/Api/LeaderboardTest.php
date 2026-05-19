@@ -118,4 +118,36 @@ class LeaderboardTest extends TestCase
         $third->assertOk();
         $third->assertJsonFragment(['score' => 999]); // Cache refreshed
     }
+
+    public function test_leaderboard_only_includes_attempts_from_the_requested_activity(): void
+    {
+        $user = \App\Models\User::factory()->create();
+        $targetActivity = \App\Models\Activity::factory()->create();
+        $otherActivity = \App\Models\Activity::factory()->create();
+
+        \App\Models\QuizAttempt::factory()->create([
+            'activity_id' => $targetActivity->id,
+            'user_id' => $user->id,
+            'score' => 88,
+            'duration_seconds' => 100,
+            'submitted_at' => now()->subMinute(),
+        ]);
+
+        \App\Models\QuizAttempt::factory()->create([
+            'activity_id' => $otherActivity->id,
+            'user_id' => $user->id + 1,
+            'score' => 99,
+            'duration_seconds' => 50,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($user, 'api');
+
+        $response = $this->getJson("/api/quiz/activities/{$targetActivity->id}/leaderboard");
+
+        $response->assertOk();
+        $response->assertJsonCount(1);
+        $response->assertJsonMissing(['score' => 99]);
+        $response->assertJsonFragment(['score' => 88]);
+    }
 }

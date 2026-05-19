@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use App\Models\Question;
-use Illuminate\Http\Request;
+use App\Services\QuizAchievementService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class QuizAttemptController extends Controller
 {
+    public function __construct(private readonly QuizAchievementService $achievementService)
+    {
+    }
+
     public function startAttempt(Request $request, $activity): JsonResponse
     {
         $attempt = QuizAttempt::create([
@@ -79,10 +84,15 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
         }
 
         DB::transaction(function () use ($quizAttempt) {
+            $submittedAt = now();
+
             $quizAttempt->update([
-                'submitted_at' => now(),
+                'submitted_at' => $submittedAt,
                 'status' => 'submitted',
                 'score' => QuizAnswer::where('attempt_id', $quizAttempt->id)->sum('awarded_score'),
+                'duration_seconds' => $quizAttempt->started_at
+                    ? max(0, $quizAttempt->started_at->diffInSeconds($submittedAt))
+                    : null,
             ]);
         });
 
@@ -103,21 +113,47 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
         $wrongAnswers = QuizAnswer::query()
             ->where('attempt_id', $quizAttempt->id)
             ->where('is_correct', false)
-            ->with('question:id,content,answer,explanation,option_explanations')
+            ->with('question:id,content,type,options,answer,explanation')
             ->get();
 
+        $totalQuestions = QuizAnswer::query()
+            ->where('attempt_id', $quizAttempt->id)
+            ->count();
+
+        $correctCount = QuizAnswer::query()
+            ->where('attempt_id', $quizAttempt->id)
+            ->where('is_correct', true)
+            ->count();
+
+        $achievementPayload = $this->achievementService->buildForUser($request->user(), $quizAttempt);
+
         return response()->json([
+            'activity_id' => $quizAttempt->activity_id,
             'score' => $quizAttempt->score,
             'submitted_at' => $quizAttempt->submitted_at,
             'anti_cheat_flags' => $quizAttempt->anti_cheat_flags,
+            'total_questions' => $totalQuestions,
+            'correct_count' => $correctCount,
+            'wrong_count' => max($totalQuestions - $correctCount, 0),
+            'achievements' => $achievementPayload['data'],
+            'newly_unlocked_achievements' => $achievementPayload['newly_unlocked'],
             'wrong_questions' => $wrongAnswers->map(function (QuizAnswer $answer): array {
+                $question = $answer->question;
+                $selectedChoice = $question ? $this->normalizeChoiceDisplay($question, $answer->answer_payload_json, false) : null;
+                $correctChoice = $question ? $this->normalizeChoiceDisplay($question, $question->answer, true) : null;
+
                 return [
                     'question_id' => $answer->question_id,
-                    'content' => $answer->question?->content,
+                    'content' => $question?->content,
                     'your_answer' => $answer->answer_payload_json,
-                    'correct_answer' => $answer->question?->answer,
-                    'explanation' => $answer->question?->explanation,
-                    'option_explanations' => $answer->question?->option_explanations ?? [],
+                    'selected_answer_label' => $selectedChoice['label'] ?? null,
+                    'selected_answer_text' => $selectedChoice['text'] ?? null,
+                    'selected_answer_display' => $selectedChoice['display'] ?? '未作答',
+                    'correct_answer' => $question?->answer,
+                    'correct_answer_label' => $correctChoice['label'] ?? null,
+                    'correct_answer_text' => $correctChoice['text'] ?? null,
+                    'correct_answer_display' => $correctChoice['display'] ?? '-',
+                    'explanation' => $question?->explanation,
                 ];
             })->values(),
         ]);
@@ -178,5 +214,78 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
         }
 
         return false;
+    }
+
+    private function normalizeChoiceDisplay(Question $question, mixed $payload, bool $treatAsStoredAnswer): array
+    {
+        if ($question->type === 'text') {
+            $value = $treatAsStoredAnswer
+                ? trim((string) $payload)
+                : trim((string) (is_array($payload) ? ($payload['value'] ?? '') : $payload));
+
+            return [
+                'label' => null,
+                'text' => $value !== '' ? $value : null,
+                'display' => $value !== '' ? $value : '未作答',
+            ];
+        }
+
+        $rawValue = $treatAsStoredAnswer
+            ? $payload
+            : (is_array($payload)
+                ? ($payload['selected_option'] ?? $payload['option'] ?? $payload['value'] ?? null)
+                : $payload);
+
+        $rawValue = trim((string) ($rawValue ?? ''));
+        if ($rawValue === '') {
+            return [
+                'label' => null,
+                'text' => null,
+                'display' => '未作答',
+            ];
+        }
+
+        $options = is_array($question->options) ? array_values($question->options) : [];
+        $labelMap = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+        if ($question->type === 'multiple' || str_contains($rawValue, ',')) {
+            $parts = collect(explode(',', $rawValue))
+                ->map(fn ($value) => trim($value))
+                ->filter()
+                ->values();
+
+            $items = $parts->map(fn (string $value) => $this->normalizeSingleChoice($value, $options, $labelMap));
+
+            return [
+                'label' => $items->pluck('label')->filter()->implode('、') ?: null,
+                'text' => $items->pluck('text')->filter()->implode('；') ?: null,
+                'display' => $items->pluck('display')->filter()->implode('；') ?: '未作答',
+            ];
+        }
+
+        return $this->normalizeSingleChoice($rawValue, $options, $labelMap);
+    }
+
+    private function normalizeSingleChoice(string $value, array $options, array $labelMap): array
+    {
+        if (in_array($value, $labelMap, true)) {
+            $index = array_search($value, $labelMap, true);
+            $text = $index !== false && isset($options[$index]) ? trim((string) $options[$index]) : null;
+
+            return [
+                'label' => $value,
+                'text' => $text,
+                'display' => $text ? sprintf('%s. %s', $value, $text) : $value,
+            ];
+        }
+
+        $index = collect($options)->search(fn ($option) => trim((string) $option) === $value);
+        $label = $index !== false && isset($labelMap[$index]) ? $labelMap[$index] : null;
+
+        return [
+            'label' => $label,
+            'text' => $value,
+            'display' => $label ? sprintf('%s. %s', $label, $value) : $value,
+        ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Question;
+use App\Models\QuestionTag;
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
 
@@ -22,6 +23,7 @@ class QuestionImportService
                 continue;
             }
 
+            QuestionTag::syncNames($row['tags'] ?? []);
             Question::create($row);
             $count++;
         }
@@ -210,6 +212,8 @@ class QuestionImportService
             }
         }
 
+        $tags = QuestionTag::normalizeNames(is_array($tags) ? $tags : []);
+
         return [
             'content' => $content,
             'type' => $type,
@@ -218,7 +222,7 @@ class QuestionImportService
             'explanation' => $explanation !== null ? (string) $explanation : null,
             'option_explanations' => [],
             'difficulty' => max(1, min(5, $difficulty)),
-            'tags' => is_array($tags) ? $tags : [],
+            'tags' => $tags,
             'status' => filter_var(
                 $this->getByAliases($normalizedRow, ['status', '启用']) ?? true,
                 FILTER_VALIDATE_BOOLEAN,

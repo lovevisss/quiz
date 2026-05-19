@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\QuizAchievementController;
 use App\Http\Controllers\Api\QuestionFeedbackController;
 use App\Http\Controllers\Api\QuizLotteryController;
 use App\Http\Controllers\Api\QuizCertificateController;
@@ -26,6 +27,8 @@ Route::middleware(['web', 'auth:api,web'])->group(function () {
     Route::get('/quiz/attempts/{attempt}/result', [QuizAttemptController::class, 'getResult']);
     Route::post('/quiz/questions/{question}/like', [QuestionFeedbackController::class, 'like'])->name('api.quiz.questions.like');
     Route::post('/quiz/questions/{question}/corrections', [QuestionFeedbackController::class, 'correction'])->name('api.quiz.questions.correction');
+    Route::get('/quiz/achievements', [QuizAchievementController::class, 'index'])
+        ->name('api.quiz.achievements');
 
     Route::post('/quiz/activities/{activity}/lottery/draw', [QuizLotteryController::class, 'draw'])
         ->middleware('role:admin')
@@ -78,11 +81,18 @@ Route::get('quiz/activities/current', function () {
 })->name('api.quiz.activities.current');
 
 Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activity $activity) {
-    $fallbackQuestions = fn () => \App\Models\Question::query()
+    $baseQuestionQuery = fn () => \App\Models\Question::query()
+        ->withCount([
+            'feedback as likes_count' => fn ($query) => $query->where('liked', true),
+            'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+        ])
         ->where('status', true)
-        ->latest('id')
+        ->select(['id', 'content', 'type', 'options', 'explanation', 'option_explanations', 'tags']);
+
+    $fallbackQuestions = fn () => $baseQuestionQuery()
+        ->inRandomOrder()
         ->limit(10)
-        ->get(['id', 'content', 'type', 'options', 'explanation', 'option_explanations', 'tags']);
+        ->get();
 
     if (! $activity->enabled) {
         return response()->json([
@@ -115,10 +125,9 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
             ->flip();
 
         $questions = $questionIds->isNotEmpty()
-            ? \App\Models\Question::query()
+            ? $baseQuestionQuery()
                 ->whereIn('id', $questionIds)
-                ->where('status', true)
-                ->get(['id', 'content', 'type', 'options', 'explanation', 'option_explanations', 'tags'])
+                ->get()
                 ->sortBy(function ($question) use ($orderMap): int {
                     return (int) ($orderMap[(int) $question->id] ?? PHP_INT_MAX);
                 })
@@ -155,6 +164,10 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
             }
 
             $chunk = \App\Models\Question::query()
+                ->withCount([
+                    'feedback as likes_count' => fn ($query) => $query->where('liked', true),
+                    'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+                ])
                 ->where('status', true)
                 ->whereJsonContains('tags', $normalizedTag)
                 ->inRandomOrder()
@@ -170,6 +183,10 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
 
         if ($selected->count() < $count) {
             $fill = \App\Models\Question::query()
+                ->withCount([
+                    'feedback as likes_count' => fn ($query) => $query->where('liked', true),
+                    'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+                ])
                 ->where('status', true)
                 ->whereNotIn('id', $selected->pluck('id'))
                 ->inRandomOrder()
@@ -191,11 +208,10 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
 
     $count = max(1, min(50, (int) ($config['count'] ?? 10)));
 
-    $questions = \App\Models\Question::query()
-        ->where('status', true)
+    $questions = $baseQuestionQuery()
         ->inRandomOrder()
         ->limit($count)
-        ->get(['id', 'content', 'type', 'options', 'explanation', 'option_explanations', 'tags']);
+        ->get();
 
     return response()->json([
         'data' => $questions,

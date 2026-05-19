@@ -2,24 +2,98 @@
 import quizRoutes from '@/routes/quiz';
 import axios from 'axios';
 import { Link } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import {
+    BrainCircuit,
+    CalendarCheck2,
+    Crown,
+    Flag,
+    Rocket,
+    Sparkles,
+    Star,
+    Trophy,
+    Zap,
+} from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
+
+type Achievement = {
+    key: string;
+    title: string;
+    description: string;
+    progress: string;
+    unlocked: boolean;
+    icon: string;
+    tone: string;
+    badge_label: string;
+};
 
 type ResultState = {
+    activity_id: number | null;
     score: number;
     submitted_at: string | null;
+    total_questions: number;
+    correct_count: number;
+    wrong_count: number;
     wrong_questions: Array<{
         question_id: number;
         content: string | null;
         your_answer: unknown;
+        selected_answer_label: string | null;
+        selected_answer_text: string | null;
+        selected_answer_display: string;
         correct_answer: string | null;
+        correct_answer_label: string | null;
+        correct_answer_text: string | null;
+        correct_answer_display: string;
         explanation: string | null;
-        option_explanations: Record<string, string>;
     }>;
+    newly_unlocked_achievements: Achievement[];
 };
 
 const loading = ref(true);
 const error = ref('');
 const result = ref<ResultState | null>(null);
+
+const iconMap = {
+    'brain-circuit': BrainCircuit,
+    'calendar-check-2': CalendarCheck2,
+    crown: Crown,
+    flag: Flag,
+    rocket: Rocket,
+    sparkles: Sparkles,
+    star: Star,
+    trophy: Trophy,
+    zap: Zap,
+} as const;
+
+const unlockedBadgeTitle = computed(() => {
+    const count = result.value?.newly_unlocked_achievements.length ?? 0;
+
+    if (count === 0) {
+        return '';
+    }
+
+    return count === 1 ? '恭喜解锁新徽章！' : `恭喜解锁 ${count} 枚新徽章！`;
+});
+
+function badgeToneClass(tone: string): string {
+    const palette: Record<string, string> = {
+        sky: 'from-sky-500 to-cyan-500',
+        indigo: 'from-indigo-500 to-violet-500',
+        amber: 'from-amber-500 to-yellow-500',
+        emerald: 'from-emerald-500 to-lime-500',
+        yellow: 'from-yellow-500 to-orange-400',
+        violet: 'from-violet-500 to-fuchsia-500',
+        rose: 'from-rose-500 to-orange-500',
+        orange: 'from-orange-500 to-amber-500',
+        fuchsia: 'from-fuchsia-500 to-pink-500',
+    };
+
+    return palette[tone] ?? palette.sky;
+}
+
+function iconComponent(name: string) {
+    return iconMap[name as keyof typeof iconMap] ?? Sparkles;
+}
 
 function resolveAttemptId(): number | null {
     const raw = Number(new URLSearchParams(window.location.search).get('attempt'));
@@ -31,6 +105,32 @@ function resolveAttemptId(): number | null {
     return raw;
 }
 
+function formatSubmittedAt(value: string | null): string {
+    if (!value) {
+        return '刚刚提交';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString('zh-CN');
+}
+
+function leaderboardHref(): string {
+    const params = new URLSearchParams();
+
+    if (result.value?.activity_id) {
+        params.set('activity', String(result.value.activity_id));
+    }
+
+    const query = params.toString();
+
+    return query ? `${quizRoutes.leaderboard().url}?${query}` : quizRoutes.leaderboard().url;
+}
+
 async function loadResult() {
     loading.value = true;
     error.value = '';
@@ -38,7 +138,7 @@ async function loadResult() {
     const attemptId = resolveAttemptId();
     if (!attemptId) {
         result.value = null;
-        error.value = 'Missing attempt id. Please finish quiz from the question page.';
+        error.value = '缺少答题记录，请从答题页正常完成后再查看结果。';
         loading.value = false;
 
         return;
@@ -47,15 +147,22 @@ async function loadResult() {
     try {
         const { data } = await axios.get(`/api/quiz/attempts/${attemptId}/result`);
         result.value = {
+            activity_id: data.activity_id ? Number(data.activity_id) : null,
             score: Number(data.score ?? 0),
             submitted_at: data.submitted_at ?? null,
+            total_questions: Number(data.total_questions ?? 0),
+            correct_count: Number(data.correct_count ?? 0),
+            wrong_count: Number(data.wrong_count ?? 0),
             wrong_questions: Array.isArray(data.wrong_questions)
                 ? data.wrong_questions
+                : [],
+            newly_unlocked_achievements: Array.isArray(data.newly_unlocked_achievements)
+                ? data.newly_unlocked_achievements
                 : [],
         };
     } catch {
         result.value = null;
-        error.value = 'Unable to load the result right now.';
+        error.value = '当前无法加载成绩结果，请稍后再试。';
     } finally {
         loading.value = false;
     }
@@ -67,28 +174,47 @@ onMounted(loadResult);
 <template>
     <div
         data-testid="quiz-result"
-        class="flex h-full flex-col gap-6"
-        style="padding-top: 20px"
+        class="flex h-full flex-col gap-5 pt-2"
     >
         <section class="space-y-4">
             <div
-                class="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"
+                class="rounded-[1.75rem] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-5 text-emerald-900 shadow-sm"
             >
-                <p
-                    class="text-xs tracking-[0.2em] text-emerald-700 uppercase"
-                >
-                    Submission complete
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs tracking-[0.2em] text-emerald-700 uppercase">答题完成</p>
+                        <h2 class="mt-2 text-2xl font-semibold text-slate-900">
+                            本次成绩概览
+                        </h2>
+                    </div>
+                    <div class="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-right shadow-sm">
+                        <p class="text-[11px] text-slate-500">提交时间</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">
+                            {{ formatSubmittedAt(result?.submitted_at ?? null) }}
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-slate-700">
+                        得分 {{ result?.score ?? 0 }}
+                    </span>
+                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                        答对 {{ result?.correct_count ?? 0 }} 题
+                    </span>
+                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
+                        错题 {{ result?.wrong_count ?? 0 }} 题
+                    </span>
+                </div>
+                <p class="mt-3 text-sm text-slate-600">
+                    可查看得分、错题和解析，方便你快速复盘并继续提升。
                 </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-900">
-                    Your score summary
-                </h2>
             </div>
 
             <div
                 v-if="loading"
                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600"
             >
-                Loading result...
+                正在加载成绩...
             </div>
 
             <div
@@ -96,54 +222,110 @@ onMounted(loadResult);
                 class="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700"
             >
                 <p class="font-medium">{{ error }}</p>
-                <p class="mt-1 text-rose-700/80">
-                    Tap retry to fetch the latest attempt.
-                </p>
+                <p class="mt-1 text-rose-700/80">点击下方“重新获取”可以再次尝试。</p>
             </div>
 
             <div
                 v-else
-                class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
             >
-                <div class="flex items-center justify-between">
-                    <span>Score</span>
-                    <span class="text-lg font-semibold text-slate-900">{{
-                        result?.score ?? 0
-                    }}</span>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs text-slate-500">得分</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ result?.score ?? 0 }}</p>
                 </div>
-                <div class="flex items-center justify-between">
-                    <span>Submitted</span>
-                    <span class="text-right text-slate-800">{{
-                        result?.submitted_at || 'Just now'
-                    }}</span>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs text-slate-500">答对题数</p>
+                    <p class="mt-2 text-3xl font-bold text-emerald-600">
+                        {{ result?.correct_count ?? 0 }}/{{ result?.total_questions ?? 0 }}
+                    </p>
                 </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs text-slate-500">错题数量</p>
+                    <p class="mt-2 text-3xl font-bold text-amber-600">
+                        {{ result?.wrong_count ?? 0 }}
+                    </p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs text-slate-500">完成状态</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900">已提交并生成成绩</p>
+                    <p class="mt-1 text-xs text-slate-500">可继续查看排行榜与成就</p>
+                </div>
+            </div>
+
+            <div
+                v-if="!loading && !error && result && result.newly_unlocked_achievements.length > 0"
+                class="rounded-3xl border border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-white to-amber-50 p-5 shadow-sm"
+            >
+                <p class="text-xs tracking-[0.2em] text-fuchsia-600 uppercase">徽章解锁</p>
+                <h3 class="mt-2 text-xl font-semibold text-slate-900">{{ unlockedBadgeTitle }}</h3>
+                <p class="mt-2 text-sm text-slate-600">本次答题触发的新成就会显示在这里，继续保持状态还能解锁更多徽章。</p>
+                <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <article
+                        v-for="(achievement, index) in result.newly_unlocked_achievements"
+                        :key="achievement.key"
+                        class="result-badge-card rounded-3xl border border-white/70 bg-white/90 p-4 shadow-sm"
+                        :style="{ animationDelay: `${index * 140}ms` }"
+                    >
+                        <div class="flex items-start gap-3">
+                            <span :class="['flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br text-white shadow-lg', badgeToneClass(achievement.tone)]">
+                                <component :is="iconComponent(achievement.icon)" class="h-6 w-6" />
+                            </span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-base font-semibold text-slate-900">{{ achievement.title }}</p>
+                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-500">
+                                        {{ achievement.badge_label }}
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-sm text-slate-600">{{ achievement.description }}</p>
+                                <p class="mt-2 text-xs font-medium text-fuchsia-600">进度：{{ achievement.progress }}</p>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div
+                v-if="!loading && !error && result && result.wrong_questions.length === 0"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+            >
+                恭喜你，本次答题全部正确，没有错题需要复盘。
             </div>
 
             <div
                 v-if="!loading && !error && result && result.wrong_questions.length > 0"
                 class="space-y-3"
             >
-                <h3 class="text-lg font-semibold text-slate-900">错题解释</h3>
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-lg font-semibold text-slate-900">错题解析</h3>
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                        共 {{ result.wrong_questions.length }} 题
+                    </span>
+                </div>
                 <article
                     v-for="wrong in result.wrong_questions"
                     :key="wrong.question_id"
-                    class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+                    class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm"
                 >
-                    <p class="font-medium">{{ wrong.content }}</p>
-                    <p class="mt-2">正确答案：{{ wrong.correct_answer || '-' }}</p>
-                    <p class="mt-1">解析：{{ wrong.explanation || '暂无解析' }}</p>
-                    <div
-                        v-if="Object.keys(wrong.option_explanations || {}).length > 0"
-                        class="mt-2 space-y-1"
-                    >
-                        <p class="font-medium">选项解释：</p>
-                        <p
-                            v-for="(value, key) in wrong.option_explanations"
-                            :key="`${wrong.question_id}-${key}`"
-                        >
-                            {{ key }}: {{ value }}
-                        </p>
+                    <p class="font-medium text-slate-900">{{ wrong.content }}</p>
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div class="rounded-xl border border-rose-200 bg-white p-3">
+                            <p class="text-xs text-rose-500">你的作答</p>
+                            <p class="mt-1 font-medium text-rose-700">
+                                {{ wrong.selected_answer_display || '未作答' }}
+                            </p>
+                        </div>
+                        <div class="rounded-xl border border-emerald-200 bg-white p-3">
+                            <p class="text-xs text-emerald-600">正确答案</p>
+                            <p class="mt-1 font-medium text-emerald-700">
+                                {{ wrong.correct_answer_display || '-' }}
+                            </p>
+                        </div>
                     </div>
+                    <p class="mt-3 rounded-xl bg-white/80 p-3 text-slate-700">
+                        <span class="font-medium text-slate-900">解析：</span>
+                        {{ wrong.explanation || '暂无解析' }}
+                    </p>
                 </article>
             </div>
         </section>
@@ -151,21 +333,45 @@ onMounted(loadResult);
         <div
             class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:mx-0"
         >
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                     type="button"
                     class="rounded-2xl border border-slate-300 px-4 py-4 text-sm font-medium text-slate-700"
                     @click="loadResult"
                 >
-                    Retry
+                    重新获取
                 </button>
                 <Link
-                    :href="quizRoutes.leaderboard().url"
+                    :href="leaderboardHref()"
                     class="rounded-2xl bg-sky-600 px-4 py-4 text-center text-sm font-semibold text-white"
                 >
-                    View leaderboard
+                    查看排行榜
                 </Link>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.result-badge-card {
+    animation: unlock-pop 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes unlock-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.72) translateY(18px) rotate(-4deg);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.04) translateY(-3px) rotate(1deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0) rotate(0deg);
+    }
+}
+</style>
+

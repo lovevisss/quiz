@@ -18,7 +18,7 @@ import quizRoutes from '@/routes/quiz';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, Folder, LayoutGrid, ListChecks, ScrollText } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, Folder, LayoutGrid, ListChecks, ScrollText, Tag } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -41,6 +41,11 @@ const mainNavItems: NavItem[] = [
         title: 'Questions',
         href: adminQuestions.index(),
         icon: BookOpen,
+    },
+    {
+        title: 'Question Tags',
+        href: '/admin/question-tags',
+        icon: Tag,
     },
     {
         title: 'Paper Strategies',

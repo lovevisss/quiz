@@ -56,6 +56,10 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::post('questions/import', [\App\Http\Controllers\Admin\QuestionImportController::class, 'import'])->name('admin.questions.import');
     Route::get('questions/import/template', [\App\Http\Controllers\Admin\QuestionImportController::class, 'template'])->name('admin.questions.import.template');
 
+    Route::get('question-tags', [\App\Http\Controllers\Admin\QuestionTagController::class, 'index'])->name('admin.question_tags.index');
+    Route::post('question-tags', [\App\Http\Controllers\Admin\QuestionTagController::class, 'store'])->name('admin.question_tags.store');
+    Route::delete('question-tags/{questionTag}', [\App\Http\Controllers\Admin\QuestionTagController::class, 'destroy'])->name('admin.question_tags.destroy');
+
     // PaperStrategy CRUD
     Route::get('paper_strategies', [\App\Http\Controllers\Admin\PaperStrategyController::class, 'index'])->name('admin.paper_strategies.index');
     Route::get('paper_strategies/create', [\App\Http\Controllers\Admin\PaperStrategyController::class, 'create'])->name('admin.paper_strategies.create');
