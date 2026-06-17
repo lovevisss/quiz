@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'wechat' => [
+        'official_account' => [
+            'app_id' => env('WECHAT_OFFICIAL_APP_ID'),
+            'app_secret' => env('WECHAT_OFFICIAL_APP_SECRET'),
+        ],
+    ],
+
 ];

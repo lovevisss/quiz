@@ -38,7 +38,12 @@ const mainNavItems: NavItem[] = [
         icon: ListChecks,
     },
     {
-        title: 'Questions',
+        title: 'Add Question',
+        href: '/admin/questions/create',
+        icon: BookOpen,
+    },
+    {
+        title: 'Manage Questions',
         href: adminQuestions.index(),
         icon: BookOpen,
     },

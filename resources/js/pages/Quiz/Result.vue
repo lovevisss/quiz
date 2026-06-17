@@ -8,6 +8,7 @@ import {
     Crown,
     Flag,
     Rocket,
+    Share2,
     Sparkles,
     Star,
     Trophy,
@@ -47,11 +48,34 @@ type ResultState = {
         explanation: string | null;
     }>;
     newly_unlocked_achievements: Achievement[];
+    share: {
+        title: string;
+        description: string;
+        link: string;
+        image: string;
+    } | null;
+};
+
+type WeChatSdk = {
+    config: (payload: Record<string, unknown>) => void;
+    ready: (callback: () => void) => void;
+    error: (callback: (error: unknown) => void) => void;
+    updateTimelineShareData: (
+        payload: Record<string, unknown>,
+        callback?: (result?: unknown) => void,
+    ) => void;
+    updateAppMessageShareData: (
+        payload: Record<string, unknown>,
+        callback?: (result?: unknown) => void,
+    ) => void;
 };
 
 const loading = ref(true);
 const error = ref('');
 const result = ref<ResultState | null>(null);
+const shareMessage = ref('');
+const shareError = ref('');
+const sharing = ref(false);
 
 const iconMap = {
     'brain-circuit': BrainCircuit,
@@ -134,6 +158,8 @@ function leaderboardHref(): string {
 async function loadResult() {
     loading.value = true;
     error.value = '';
+    shareMessage.value = '';
+    shareError.value = '';
 
     const attemptId = resolveAttemptId();
     if (!attemptId) {
@@ -159,12 +185,165 @@ async function loadResult() {
             newly_unlocked_achievements: Array.isArray(data.newly_unlocked_achievements)
                 ? data.newly_unlocked_achievements
                 : [],
+            share:
+                data.share && typeof data.share === 'object'
+                    ? {
+                        title: String(data.share.title ?? ''),
+                        description: String(data.share.description ?? ''),
+                        link: String(data.share.link ?? ''),
+                        image: String(data.share.image ?? ''),
+                    }
+                    : null,
         };
     } catch {
         result.value = null;
         error.value = '当前无法加载成绩结果，请稍后再试。';
     } finally {
         loading.value = false;
+    }
+}
+
+function currentPageUrl(): string {
+    return window.location.href.split('#')[0] ?? window.location.href;
+}
+
+function isWeChatBrowser(): boolean {
+    return /MicroMessenger/i.test(window.navigator.userAgent);
+}
+
+function getWeChatSdk(): WeChatSdk | null {
+    return (window as Window & { wx?: WeChatSdk }).wx ?? null;
+}
+
+async function ensureWeChatSdk(): Promise<WeChatSdk> {
+    const existingSdk = getWeChatSdk();
+
+    if (existingSdk) {
+        return existingSdk;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+        const existingScript = document.querySelector<HTMLScriptElement>('script[data-wechat-sdk="true"]');
+
+        if (existingScript) {
+            existingScript.addEventListener('load', () => resolve(), { once: true });
+            existingScript.addEventListener('error', () => reject(new Error('微信 SDK 加载失败')), { once: true });
+
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
+        script.async = true;
+        script.dataset.wechatSdk = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('微信 SDK 加载失败'));
+        document.head.appendChild(script);
+    });
+
+    const sdk = getWeChatSdk();
+
+    if (!sdk) {
+        throw new Error('微信 SDK 未就绪');
+    }
+
+    return sdk;
+}
+
+function configureWeChatSdk(sdk: WeChatSdk, config: Record<string, unknown>): Promise<void> {
+    return new Promise((resolve, reject) => {
+        sdk.ready(() => resolve());
+        sdk.error((sdkError) => reject(sdkError));
+        sdk.config({
+            ...config,
+            debug: false,
+        });
+    });
+}
+
+function updateWeChatShareData(sdk: WeChatSdk, share: NonNullable<ResultState['share']>): Promise<void> {
+    const timelinePayload = {
+        title: share.title,
+        link: share.link,
+        imgUrl: share.image,
+    };
+
+    const messagePayload = {
+        title: share.title,
+        desc: share.description,
+        link: share.link,
+        imgUrl: share.image,
+    };
+
+    return new Promise((resolve) => {
+        sdk.updateTimelineShareData(timelinePayload, () => undefined);
+        sdk.updateAppMessageShareData(messagePayload, () => undefined);
+        resolve();
+    });
+}
+
+async function copyShareLink(link: string): Promise<boolean> {
+    if (!link) {
+        return false;
+    }
+
+    if (window.navigator.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(link);
+
+        return true;
+    }
+
+    const input = document.createElement('input');
+    input.value = link;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(input);
+
+    return copied;
+}
+
+async function shareToTimeline(): Promise<void> {
+    shareMessage.value = '';
+    shareError.value = '';
+
+    const share = result.value?.share;
+
+    if (!share?.link) {
+        shareError.value = '当前成绩尚未生成可分享链接，请先完成答题并刷新结果。';
+
+        return;
+    }
+
+    sharing.value = true;
+
+    try {
+        if (isWeChatBrowser()) {
+            const sdk = await ensureWeChatSdk();
+            const { data } = await axios.post('/api/quiz/wechat/share-config', {
+                url: currentPageUrl(),
+            });
+
+            if (data?.enabled && data?.config) {
+                await configureWeChatSdk(sdk, data.config as Record<string, unknown>);
+                await updateWeChatShareData(sdk, share);
+                shareMessage.value = '朋友圈分享内容已准备好，请点击右上角“···”后选择“分享到朋友圈”。';
+
+                return;
+            }
+        }
+
+        const copied = await copyShareLink(share.link);
+        shareMessage.value = copied
+            ? '已复制分享链接。可在微信中打开后，再分享到朋友圈。'
+            : '当前环境不支持自动复制，请手动复制分享链接。';
+    } catch {
+        shareError.value = '暂时无法完成微信分享配置，请稍后重试。';
+    } finally {
+        sharing.value = false;
     }
 }
 
@@ -207,6 +386,23 @@ onMounted(loadResult);
                 </div>
                 <p class="mt-3 text-sm text-slate-600">
                     可查看得分、错题和解析，方便你快速复盘并继续提升。
+                </p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white/90 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-400 hover:bg-white"
+                        :disabled="sharing"
+                        @click="shareToTimeline"
+                    >
+                        <Share2 class="h-4 w-4" />
+                        {{ sharing ? '准备分享中...' : '分享到微信朋友圈' }}
+                    </button>
+                </div>
+                <p v-if="shareMessage" class="mt-3 rounded-2xl bg-emerald-100 px-4 py-3 text-sm text-emerald-700">
+                    {{ shareMessage }}
+                </p>
+                <p v-if="shareError" class="mt-3 rounded-2xl bg-rose-100 px-4 py-3 text-sm text-rose-700">
+                    {{ shareError }}
                 </p>
             </div>
 
@@ -333,13 +529,21 @@ onMounted(loadResult);
         <div
             class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:mx-0"
         >
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <button
                     type="button"
                     class="rounded-2xl border border-slate-300 px-4 py-4 text-sm font-medium text-slate-700"
                     @click="loadResult"
                 >
                     重新获取
+                </button>
+                <button
+                    type="button"
+                    class="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700 disabled:opacity-50"
+                    :disabled="sharing"
+                    @click="shareToTimeline"
+                >
+                    {{ sharing ? '准备分享中...' : '分享到朋友圈' }}
                 </button>
                 <Link
                     :href="leaderboardHref()"

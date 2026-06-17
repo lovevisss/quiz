@@ -6,12 +6,20 @@
                     <h1 class="text-2xl font-bold">题目标签管理</h1>
                     <p class="mt-1 text-sm text-slate-600">在这里维护题库可选标签，`题库管理` 页面会直接从这里选择标签。</p>
                 </div>
-                <Link
-                    href="/admin/questions"
-                    class="inline-flex rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-                >
-                    返回题库管理
-                </Link>
+                <div class="flex flex-wrap gap-2">
+                    <Link
+                        href="/admin/questions"
+                        class="inline-flex rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                    >
+                        返回管理题目
+                    </Link>
+                    <Link
+                        href="/admin/questions/create"
+                        class="inline-flex rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700"
+                    >
+                        去新增题目
+                    </Link>
+                </div>
             </div>
         </section>
 

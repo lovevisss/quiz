@@ -126,6 +126,50 @@ function progressPercent(achievement: Achievement): number {
     return Math.max(0, Math.min(100, percent));
 }
 
+function progressDisplay(achievement: Achievement): {
+    completed: string;
+    remaining: string;
+    split: boolean;
+    highlightCompleted: boolean;
+} {
+    const progressMeta = achievement.progress_meta;
+
+    if (
+        progressMeta &&
+        progressMeta.direction === 'up' &&
+        typeof progressMeta.target === 'number' &&
+        progressMeta.target > 0
+    ) {
+        const current = Math.max(0, Math.min(progressMeta.target, Number(progressMeta.current ?? 0)));
+
+        return {
+            completed: String(current),
+            remaining: `/${progressMeta.target}`,
+            split: true,
+            highlightCompleted: current > 0,
+        };
+    }
+
+    return {
+        completed: achievement.progress,
+        remaining: '',
+        split: false,
+        highlightCompleted: achievement.unlocked,
+    };
+}
+
+function progressFillClass(achievement: Achievement): string {
+    if (achievement.unlocked) {
+        return 'bg-gradient-to-r from-emerald-500 via-emerald-500 to-lime-400 opacity-100';
+    }
+
+    if (progressPercent(achievement) > 0) {
+        return 'bg-gradient-to-r from-emerald-500 to-emerald-400 opacity-90';
+    }
+
+    return 'bg-slate-300 opacity-70';
+}
+
 async function loadAchievements(): Promise<void> {
     loading.value = true;
     error.value = '';
@@ -288,12 +332,24 @@ onMounted(loadAchievements);
                         <div class="mt-4">
                             <div class="flex items-center justify-between text-xs text-slate-500">
                                 <span>当前进度</span>
-                                <span>{{ achievement.progress }}</span>
+                                <span
+                                    class="inline-flex items-baseline gap-0.5 text-sm font-semibold"
+                                    :class="progressDisplay(achievement).split ? '' : progressDisplay(achievement).highlightCompleted ? 'text-emerald-600' : 'text-slate-500'"
+                                >
+                                    <span
+                                        :class="progressDisplay(achievement).highlightCompleted ? 'text-emerald-600' : 'text-slate-500'"
+                                    >
+                                        {{ progressDisplay(achievement).completed }}
+                                    </span>
+                                    <span v-if="progressDisplay(achievement).remaining" class="text-slate-400">
+                                        {{ progressDisplay(achievement).remaining }}
+                                    </span>
+                                </span>
                             </div>
-                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
+                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80">
                                 <div
-                                    class="h-full rounded-full bg-slate-900/70 transition-all duration-700"
-                                    :class="achievement.unlocked ? 'opacity-100' : 'opacity-60'"
+                                    class="h-full rounded-full transition-all duration-700"
+                                    :class="progressFillClass(achievement)"
                                     :style="{ width: `${progressPercent(achievement)}%` }"
                                 ></div>
                             </div>

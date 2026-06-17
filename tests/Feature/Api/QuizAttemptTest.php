@@ -7,6 +7,7 @@ use App\Models\QuizAnswer;
 use App\Models\User;
 use App\Models\QuizAttempt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class QuizAttemptTest extends TestCase
@@ -189,5 +190,73 @@ class QuizAttemptTest extends TestCase
         $response->assertJsonFragment(['key' => 'lightning_hand']);
         $response->assertJsonFragment(['key' => 'speed_run']);
         $response->assertJsonFragment(['key' => 'triple_star']);
+    }
+
+    public function test_result_includes_public_share_payload(): void
+    {
+        $user = User::factory()->withoutTwoFactor()->create();
+        $attempt = QuizAttempt::factory()->create([
+            'activity_id' => 6,
+            'user_id' => $user->id,
+            'score' => 6,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($user, 'api');
+
+        $response = $this->getJson("/api/quiz/attempts/{$attempt->id}/result");
+
+        $response->assertOk();
+        $response->assertJsonPath('share.image', url('/apple-touch-icon.png'));
+        $this->assertStringContainsString(
+            "/quiz/share/attempts/{$attempt->id}",
+            (string) $response->json('share.link'),
+        );
+    }
+
+    public function test_signed_public_share_page_is_accessible(): void
+    {
+        $user = User::factory()->withoutTwoFactor()->create();
+        $attempt = QuizAttempt::factory()->create([
+            'user_id' => $user->id,
+            'score' => 8,
+            'submitted_at' => now(),
+        ]);
+
+        QuizAnswer::query()->create([
+            'attempt_id' => $attempt->id,
+            'question_id' => Question::factory()->create()->id,
+            'answer_payload_json' => ['selected_option' => 'A'],
+            'is_correct' => true,
+            'awarded_score' => 1,
+            'answered_at' => now(),
+        ]);
+
+        $signedUrl = URL::signedRoute('quiz.share.attempt', ['attempt' => $attempt]);
+
+        $this->get($signedUrl)
+            ->assertOk()
+            ->assertSee('微信朋友圈分享')
+            ->assertSee('本次得分');
+
+        $this->get(route('quiz.share.attempt', ['attempt' => $attempt]))
+            ->assertForbidden();
+    }
+
+    public function test_wechat_share_config_endpoint_returns_disabled_when_not_configured(): void
+    {
+        config()->set('services.wechat.official_account.app_id', null);
+        config()->set('services.wechat.official_account.app_secret', null);
+
+        $user = User::factory()->withoutTwoFactor()->create();
+        $this->actingAs($user, 'api');
+
+        $this->postJson('/api/quiz/wechat/share-config', [
+            'url' => 'https://example.com/quiz/result?attempt=1',
+        ])
+            ->assertOk()
+            ->assertJson([
+                'enabled' => false,
+            ]);
     }
 }

@@ -6,13 +6,17 @@ use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use App\Models\Question;
 use App\Services\QuizAchievementService;
+use App\Services\QuizShareService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class QuizAttemptController extends Controller
 {
-    public function __construct(private readonly QuizAchievementService $achievementService)
+    public function __construct(
+        private readonly QuizAchievementService $achievementService,
+        private readonly QuizShareService $quizShareService,
+    )
     {
     }
 
@@ -137,6 +141,11 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
             'wrong_count' => max($totalQuestions - $correctCount, 0),
             'achievements' => $achievementPayload['data'],
             'newly_unlocked_achievements' => $achievementPayload['newly_unlocked'],
+            'share' => $this->quizShareService->buildPublicShareData($quizAttempt, [
+                'total_questions' => $totalQuestions,
+                'correct_count' => $correctCount,
+                'wrong_count' => max($totalQuestions - $correctCount, 0),
+            ]),
             'wrong_questions' => $wrongAnswers->map(function (QuizAnswer $answer): array {
                 $question = $answer->question;
                 $selectedChoice = $question ? $this->normalizeChoiceDisplay($question, $answer->answer_payload_json, false) : null;

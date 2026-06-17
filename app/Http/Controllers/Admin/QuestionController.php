@@ -6,35 +6,67 @@ use App\Http\Controllers\Controller;
 use App\Models\Question;
 use App\Models\QuestionTag;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Support\Facades\Auth;
 
 class QuestionController extends Controller
 {
-    public function index()
+    public function index(Request $request): Response
     {
         $this->syncManagedTagsFromQuestions();
 
-        $questions = Question::query()
+        $filters = $request->validate([
+            'tag' => 'nullable|string|max:50',
+            'sort' => 'nullable|in:latest,likes_desc,feedback_desc',
+        ]);
+
+        $selectedTag = trim((string) ($filters['tag'] ?? ''));
+        $sort = (string) ($filters['sort'] ?? 'latest');
+
+        $questionsQuery = Question::query()
             ->withCount([
                 'feedback as likes_count' => fn ($query) => $query->where('liked', true),
                 'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+                'feedback as feedback_count' => fn ($query) => $query->whereNotNull('correction_text'),
             ])
             ->with([
                 'feedback' => fn ($query) => $query
                     ->whereNotNull('correction_text')
                     ->latest()
                     ->with('user:id,name'),
-            ])
-            ->orderByDesc('id')
-            ->get();
+            ]);
+
+        if ($selectedTag !== '') {
+            $questionsQuery->whereJsonContains('tags', $selectedTag);
+        }
+
+        match ($sort) {
+            'likes_desc' => $questionsQuery->orderByDesc('likes_count')->orderByDesc('id'),
+            'feedback_desc' => $questionsQuery->orderByDesc('feedback_count')->orderByDesc('id'),
+            default => $questionsQuery->orderByDesc('id'),
+        };
+
+        $questions = $questionsQuery->get();
 
         return Inertia::render('Admin/Questions', [
             'questions' => $questions,
-            'availableTags' => QuestionTag::query()
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'availableTags' => $this->availableTags(),
+            'filters' => [
+                'tag' => $selectedTag,
+                'sort' => $sort,
+            ],
+        ]);
+    }
+
+    public function create(): Response
+    {
+        $this->syncManagedTagsFromQuestions();
+
+        return Inertia::render('Admin/QuestionCreate', [
+            'availableTags' => $this->availableTags(),
         ]);
     }
 
@@ -62,7 +94,9 @@ class QuestionController extends Controller
             'question_id' => $question->id,
             'data' => $validated,
         ]);
-        return redirect()->route('admin.questions.index')->with('success', 'Question created');
+
+        return $this->redirectBackOrTo($request, route('admin.questions.create'))
+            ->with('success', 'Question created');
     }
 
     public function update(Request $request, Question $question)
@@ -91,17 +125,28 @@ class QuestionController extends Controller
             'question_id' => $question->id,
             'data' => $validated,
         ]);
-        return redirect()->route('admin.questions.index')->with('success', 'Question updated');
+
+        return $this->redirectBackOrTo($request, route('admin.questions.index'))
+            ->with('success', 'Question updated');
     }
 
-    public function destroy(Question $question)
+    public function destroy(Request $request, Question $question)
     {
         $question->delete();
         Log::info('Admin deleted question', [
             'admin_id' => Auth::id(),
             'question_id' => $question->id,
         ]);
-        return redirect()->route('admin.questions.index')->with('success', 'Question deleted');
+
+        return $this->redirectBackOrTo($request, route('admin.questions.index'))
+            ->with('success', 'Question deleted');
+    }
+
+    private function availableTags()
+    {
+        return QuestionTag::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     private function syncManagedTagsFromQuestions(): void
@@ -112,5 +157,16 @@ class QuestionController extends Controller
                 ->flatMap(fn (Question $question): array => is_array($question->tags) ? $question->tags : [])
                 ->all(),
         );
+    }
+
+    private function redirectBackOrTo(Request $request, string $fallback): RedirectResponse
+    {
+        $referer = $request->headers->get('referer');
+
+        if (is_string($referer) && $referer !== '') {
+            return redirect()->to($referer);
+        }
+
+        return redirect()->to($fallback);
     }
 }

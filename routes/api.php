@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\QuizAchievementController;
 use App\Http\Controllers\Api\QuestionFeedbackController;
 use App\Http\Controllers\Api\QuizLotteryController;
 use App\Http\Controllers\Api\QuizCertificateController;
+use App\Http\Controllers\Api\WeChatShareController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\QuizAttemptController;
@@ -29,6 +30,8 @@ Route::middleware(['web', 'auth:api,web'])->group(function () {
     Route::post('/quiz/questions/{question}/corrections', [QuestionFeedbackController::class, 'correction'])->name('api.quiz.questions.correction');
     Route::get('/quiz/achievements', [QuizAchievementController::class, 'index'])
         ->name('api.quiz.achievements');
+    Route::post('/quiz/wechat/share-config', WeChatShareController::class)
+        ->name('api.quiz.wechat.share-config');
 
     Route::post('/quiz/activities/{activity}/lottery/draw', [QuizLotteryController::class, 'draw'])
         ->middleware('role:admin')

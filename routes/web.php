@@ -41,6 +41,9 @@ Route::prefix('quiz')->group(function () {
     Route::inertia('/result', 'Quiz/Result')->name('quiz.result');
     Route::inertia('/leaderboard', 'Quiz/Leaderboard')->name('quiz.leaderboard');
     Route::inertia('/certificate', 'Quiz/Certificate')->name('quiz.certificate');
+    Route::get('/share/attempts/{attempt}', [\App\Http\Controllers\QuizShareController::class, 'show'])
+        ->middleware('signed')
+        ->name('quiz.share.attempt');
 });
 
 Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
@@ -50,6 +53,7 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('activities/{activity}/toggle-status', [\App\Http\Controllers\Admin\ActivityController::class, 'toggleStatus'])->name('admin.activities.toggle-status');
 
     Route::get('questions', [\App\Http\Controllers\Admin\QuestionController::class, 'index'])->name('admin.questions.index');
+    Route::get('questions/create', [\App\Http\Controllers\Admin\QuestionController::class, 'create'])->name('admin.questions.create');
     Route::post('questions', [\App\Http\Controllers\Admin\QuestionController::class, 'store'])->name('admin.questions.store');
     Route::put('questions/{question}', [\App\Http\Controllers\Admin\QuestionController::class, 'update'])->name('admin.questions.update');
     Route::delete('questions/{question}', [\App\Http\Controllers\Admin\QuestionController::class, 'destroy'])->name('admin.questions.destroy');
