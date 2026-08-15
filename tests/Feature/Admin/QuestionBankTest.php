@@ -22,13 +22,12 @@ class QuestionBankTest extends TestCase
         Role::create(['name' => 'User', 'slug' => 'user']);
     }
 
-    public function test_admin_can_crud_questions()
+    public function test_admin_can_crud_questions(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
         $this->actingAs($admin);
 
-        // Create
         $payload = [
             'content' => 'Test Question',
             'type' => 'single',
@@ -38,21 +37,32 @@ class QuestionBankTest extends TestCase
             'tags' => ['math'],
             'status' => true,
         ];
-        $response = $this->post(route('admin.questions.store'), $payload);
-        $response->assertRedirect(route('admin.questions.create'));
+
+        $this->post(route('admin.questions.store'), $payload)
+            ->assertRedirect(route('admin.questions.create'));
         $this->assertDatabaseHas('questions', ['content' => 'Test Question']);
 
-        $question = Question::first();
+        $question = Question::firstOrFail();
+        $update = [
+            'content' => 'Updated Question',
+            'type' => 'single',
+            'options' => ['A', 'B'],
+            'answer' => 'B',
+            'difficulty' => 3,
+            'tags' => ['science'],
+            'status' => false,
+        ];
 
-        // Update
-        $update = ['content' => 'Updated Question', 'type' => 'single', 'options' => ['A', 'B'], 'answer' => 'B', 'difficulty' => 3, 'tags' => ['science'], 'status' => false];
-        $response = $this->put(route('admin.questions.update', $question), $update);
-        $response->assertRedirect(route('admin.questions.index'));
-        $this->assertDatabaseHas('questions', ['content' => 'Updated Question', 'answer' => 'B']);
+        $this->put(route('admin.questions.update', $question), $update)
+            ->assertRedirect(route('admin.questions.index'));
+        $this->assertDatabaseHas('questions', [
+            'content' => 'Updated Question',
+            'answer' => 'B',
+            'status' => false,
+        ]);
 
-        // Delete
-        $response = $this->delete(route('admin.questions.destroy', $question));
-        $response->assertRedirect(route('admin.questions.index'));
+        $this->delete(route('admin.questions.destroy', $question))
+            ->assertRedirect(route('admin.questions.index'));
         $this->assertDatabaseMissing('questions', ['content' => 'Updated Question']);
     }
 
@@ -127,10 +137,9 @@ class QuestionBankTest extends TestCase
                 ->component('Admin/Questions')
                 ->where('filters.tag', '安全')
                 ->where('filters.sort', 'likes_desc')
-                ->has('questions', 2)
-                ->where('questions.0.id', $questionThree->id)
-                ->where('questions.1.id', $questionOne->id)
-            );
+                ->has('questions.data', 2)
+                ->where('questions.data.0.id', $questionThree->id)
+                ->where('questions.data.1.id', $questionOne->id));
 
         $this->get(route('admin.questions.index', [
             'sort' => 'feedback_desc',
@@ -139,21 +148,58 @@ class QuestionBankTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Questions')
                 ->where('filters.sort', 'feedback_desc')
-                ->where('questions.0.id', $questionThree->id)
-                ->where('questions.1.id', $questionTwo->id)
-            );
+                ->where('questions.data.0.id', $questionThree->id)
+                ->where('questions.data.1.id', $questionTwo->id));
     }
 
-    public function test_non_admin_cannot_access_questions()
+    public function test_admin_can_search_filter_type_status_and_paginate_questions(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        Question::factory()->count(25)->create([
+            'type' => 'single',
+            'status' => true,
+        ]);
+
+        $target = Question::factory()->create([
+            'content' => 'Mobile security special question',
+            'type' => 'multiple',
+            'status' => false,
+        ]);
+
+        $this->get(route('admin.questions.index', [
+            'q' => 'special',
+            'type' => 'multiple',
+            'status' => 'inactive',
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Questions')
+                ->where('filters.q', 'special')
+                ->where('filters.type', 'multiple')
+                ->where('filters.status', 'inactive')
+                ->has('questions.data', 1)
+                ->where('questions.data.0.id', $target->id));
+
+        $this->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Questions')
+                ->has('questions.data', 20)
+                ->where('questions.total', 26));
+    }
+
+    public function test_non_admin_cannot_access_questions(): void
     {
         $user = User::factory()->create();
         $user->assignRole('user');
         $this->actingAs($user);
-        $response = $this->get(route('admin.questions.index'));
-        $response->assertForbidden();
-        $response = $this->get(route('admin.questions.create'));
-        $response->assertForbidden();
-        $response = $this->post(route('admin.questions.store'), [
+
+        $this->get(route('admin.questions.index'))->assertForbidden();
+        $this->get(route('admin.questions.create'))->assertForbidden();
+        $this->post(route('admin.questions.store'), [
             'content' => 'Should Fail',
             'type' => 'single',
             'options' => ['A'],
@@ -161,7 +207,6 @@ class QuestionBankTest extends TestCase
             'difficulty' => 1,
             'tags' => [],
             'status' => true,
-        ]);
-        $response->assertForbidden();
+        ])->assertForbidden();
     }
 }

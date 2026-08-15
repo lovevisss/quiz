@@ -20,16 +20,24 @@ const steps = [
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs tracking-[0.24em] text-sky-700 uppercase">
+                        <p
+                            class="text-xs tracking-[0.24em] text-sky-700 uppercase"
+                        >
                             校园在线答题
                         </p>
-                        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+                        <h1
+                            class="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl"
+                        >
                             移动端优先的答题流程
                         </h1>
                     </div>
-                    <div class="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-right shadow-sm">
+                    <div
+                        class="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-right shadow-sm"
+                    >
                         <p class="text-[11px] text-slate-500">流程覆盖</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-900">首页 / 答题 / 成绩 / 排行 / 成就</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">
+                            首页 / 答题 / 成绩 / 排行 / 成就
+                        </p>
                     </div>
                 </div>
                 <p class="mt-3 text-sm leading-6 text-slate-600 sm:max-w-2xl">

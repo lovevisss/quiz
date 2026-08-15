@@ -42,44 +42,21 @@ class LeaderboardTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            '*' => ['user_id', 'score', 'duration_seconds', 'submitted_at', 'rank']
+            '*' => ['user_id', 'user_name', 'score', 'duration_seconds', 'submitted_at', 'rank', 'is_current_user'],
         ]);
 
         $responseData = $response->json();
 
-        // Build expected sorted attempts and ranks
         $sorted = $attempts->sortBy([
             ['score', 'desc'],
             ['duration_seconds', 'asc'],
             ['submitted_at', 'asc'],
         ])->values();
-        $expected = [];
-        $rank = 1;
-        $prev = null;
-        $sameRankCount = 0;
-        foreach ($sorted as $i => $attempt) {
-            $current = [
-                'score' => $attempt->score,
-                'duration_seconds' => $attempt->duration_seconds,
-                'submitted_at' => $attempt->submitted_at,
-            ];
-            if ($prev && $current['score'] === $prev['score'] && $current['duration_seconds'] === $prev['duration_seconds'] && $current['submitted_at'] === $prev['submitted_at']) {
-                $sameRankCount++;
-            } else {
-                $rank += $sameRankCount;
-                $sameRankCount = 1;
-            }
-            $expected[] = [
-                'user_id' => $attempt->user_id,
-                'score' => $attempt->score,
-                'duration_seconds' => $attempt->duration_seconds,
-                'submitted_at' => $attempt->submitted_at,
-                'rank' => $rank,
-            ];
-            $prev = $current;
-        }
 
-        $this->assertEquals($expected, $responseData);
+        $this->assertSame($sorted->pluck('user_id')->all(), collect($responseData)->pluck('user_id')->all());
+        $this->assertSame([1, 2, 3], collect($responseData)->pluck('rank')->all());
+        $this->assertTrue($responseData[0]['is_current_user']);
+        $this->assertSame($user->name, $responseData[0]['user_name']);
     }
 
     public function test_leaderboard_cache_behavior()

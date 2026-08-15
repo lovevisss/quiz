@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import quizRoutes from '@/routes/quiz';
-import axios from 'axios';
 import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     BrainCircuit,
     CalendarCheck2,
@@ -58,7 +58,9 @@ const summary = ref<Summary>({
     unlocked_count: 0,
 });
 
-const unlockedAchievements = computed(() => achievements.value.filter((item) => item.unlocked));
+const unlockedAchievements = computed(() =>
+    achievements.value.filter((item) => item.unlocked),
+);
 
 const iconMap = {
     'brain-circuit': BrainCircuit,
@@ -78,15 +80,33 @@ function iconComponent(name: string) {
 
 function toneClasses(tone: string, unlocked: boolean): string {
     const palette: Record<string, string> = {
-        sky: unlocked ? 'from-sky-100 via-white to-cyan-100 border-sky-200' : 'from-slate-50 to-white border-slate-200',
-        indigo: unlocked ? 'from-indigo-100 via-white to-violet-100 border-indigo-200' : 'from-slate-50 to-white border-slate-200',
-        amber: unlocked ? 'from-amber-100 via-white to-yellow-100 border-amber-200' : 'from-slate-50 to-white border-slate-200',
-        emerald: unlocked ? 'from-emerald-100 via-white to-lime-100 border-emerald-200' : 'from-slate-50 to-white border-slate-200',
-        yellow: unlocked ? 'from-yellow-100 via-white to-amber-100 border-yellow-200' : 'from-slate-50 to-white border-slate-200',
-        violet: unlocked ? 'from-violet-100 via-white to-fuchsia-100 border-violet-200' : 'from-slate-50 to-white border-slate-200',
-        rose: unlocked ? 'from-rose-100 via-white to-orange-100 border-rose-200' : 'from-slate-50 to-white border-slate-200',
-        orange: unlocked ? 'from-orange-100 via-white to-amber-100 border-orange-200' : 'from-slate-50 to-white border-slate-200',
-        fuchsia: unlocked ? 'from-fuchsia-100 via-white to-pink-100 border-fuchsia-200' : 'from-slate-50 to-white border-slate-200',
+        sky: unlocked
+            ? 'from-sky-100 via-white to-cyan-100 border-sky-200'
+            : 'from-slate-50 to-white border-slate-200',
+        indigo: unlocked
+            ? 'from-indigo-100 via-white to-violet-100 border-indigo-200'
+            : 'from-slate-50 to-white border-slate-200',
+        amber: unlocked
+            ? 'from-amber-100 via-white to-yellow-100 border-amber-200'
+            : 'from-slate-50 to-white border-slate-200',
+        emerald: unlocked
+            ? 'from-emerald-100 via-white to-lime-100 border-emerald-200'
+            : 'from-slate-50 to-white border-slate-200',
+        yellow: unlocked
+            ? 'from-yellow-100 via-white to-amber-100 border-yellow-200'
+            : 'from-slate-50 to-white border-slate-200',
+        violet: unlocked
+            ? 'from-violet-100 via-white to-fuchsia-100 border-violet-200'
+            : 'from-slate-50 to-white border-slate-200',
+        rose: unlocked
+            ? 'from-rose-100 via-white to-orange-100 border-rose-200'
+            : 'from-slate-50 to-white border-slate-200',
+        orange: unlocked
+            ? 'from-orange-100 via-white to-amber-100 border-orange-200'
+            : 'from-slate-50 to-white border-slate-200',
+        fuchsia: unlocked
+            ? 'from-fuchsia-100 via-white to-pink-100 border-fuchsia-200'
+            : 'from-slate-50 to-white border-slate-200',
     };
 
     return palette[tone] ?? palette.sky;
@@ -95,14 +115,30 @@ function toneClasses(tone: string, unlocked: boolean): string {
 function iconToneClass(tone: string, unlocked: boolean): string {
     const palette: Record<string, string> = {
         sky: unlocked ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-500',
-        indigo: unlocked ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500',
-        amber: unlocked ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500',
-        emerald: unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500',
-        yellow: unlocked ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-500',
-        violet: unlocked ? 'bg-violet-600 text-white' : 'bg-slate-200 text-slate-500',
-        rose: unlocked ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-500',
-        orange: unlocked ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-500',
-        fuchsia: unlocked ? 'bg-fuchsia-600 text-white' : 'bg-slate-200 text-slate-500',
+        indigo: unlocked
+            ? 'bg-indigo-600 text-white'
+            : 'bg-slate-200 text-slate-500',
+        amber: unlocked
+            ? 'bg-amber-500 text-white'
+            : 'bg-slate-200 text-slate-500',
+        emerald: unlocked
+            ? 'bg-emerald-600 text-white'
+            : 'bg-slate-200 text-slate-500',
+        yellow: unlocked
+            ? 'bg-yellow-500 text-white'
+            : 'bg-slate-200 text-slate-500',
+        violet: unlocked
+            ? 'bg-violet-600 text-white'
+            : 'bg-slate-200 text-slate-500',
+        rose: unlocked
+            ? 'bg-rose-500 text-white'
+            : 'bg-slate-200 text-slate-500',
+        orange: unlocked
+            ? 'bg-orange-500 text-white'
+            : 'bg-slate-200 text-slate-500',
+        fuchsia: unlocked
+            ? 'bg-fuchsia-600 text-white'
+            : 'bg-slate-200 text-slate-500',
     };
 
     return palette[tone] ?? palette.sky;
@@ -140,7 +176,10 @@ function progressDisplay(achievement: Achievement): {
         typeof progressMeta.target === 'number' &&
         progressMeta.target > 0
     ) {
-        const current = Math.max(0, Math.min(progressMeta.target, Number(progressMeta.current ?? 0)));
+        const current = Math.max(
+            0,
+            Math.min(progressMeta.target, Number(progressMeta.current ?? 0)),
+        );
 
         return {
             completed: String(current),
@@ -182,13 +221,15 @@ async function loadAchievements(): Promise<void> {
             perfect_attempts: Number(data?.summary?.perfect_attempts ?? 0),
             correct_answers: Number(data?.summary?.correct_answers ?? 0),
             fastest_correct_seconds:
-                data?.summary?.fastest_correct_seconds === null || data?.summary?.fastest_correct_seconds === undefined
+                data?.summary?.fastest_correct_seconds === null ||
+                data?.summary?.fastest_correct_seconds === undefined
                     ? null
                     : Number(data.summary.fastest_correct_seconds),
             max_correct_streak: Number(data?.summary?.max_correct_streak ?? 0),
             max_fast_streak: Number(data?.summary?.max_fast_streak ?? 0),
             fastest_perfect_run_seconds:
-                data?.summary?.fastest_perfect_run_seconds === null || data?.summary?.fastest_perfect_run_seconds === undefined
+                data?.summary?.fastest_perfect_run_seconds === null ||
+                data?.summary?.fastest_perfect_run_seconds === undefined
                     ? null
                     : Number(data.summary.fastest_perfect_run_seconds),
             unlocked_count: Number(data?.summary?.unlocked_count ?? 0),
@@ -215,54 +256,88 @@ onMounted(loadAchievements);
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs tracking-[0.2em] text-amber-600 uppercase">成就中心</p>
+                        <p
+                            class="text-xs tracking-[0.2em] text-amber-600 uppercase"
+                        >
+                            成就中心
+                        </p>
                         <h2 class="mt-3 text-3xl font-semibold tracking-tight">
                             我的答题成就
                         </h2>
                     </div>
-                    <div class="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-right shadow-sm">
+                    <div
+                        class="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-right shadow-sm"
+                    >
                         <p class="text-[11px] text-slate-500">当前已解锁</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-900">{{ summary.unlocked_count }} 枚徽章</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">
+                            {{ summary.unlocked_count }} 枚徽章
+                        </p>
                     </div>
                 </div>
                 <p class="mt-3 text-sm leading-6 text-slate-600">
                     这里展示你在答题过程中的关键里程碑、速度徽章与连击成就。
                 </p>
                 <div class="mt-4 flex flex-wrap gap-3">
-                    <div class="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+                    <div
+                        class="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm"
+                    >
                         已解锁 {{ summary.unlocked_count }} 枚徽章
                     </div>
-                    <div class="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700 shadow-sm">
+                    <div
+                        class="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700 shadow-sm"
+                    >
                         满分 {{ summary.perfect_attempts }} 次
                     </div>
                 </div>
             </div>
 
-            <div v-if="loading" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <div
+                v-if="loading"
+                class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600"
+            >
                 正在加载成就...
             </div>
 
-            <div v-else-if="error" class="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">
+            <div
+                v-else-if="error"
+                class="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700"
+            >
                 {{ error }}
             </div>
 
             <div v-else class="space-y-4">
                 <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
                         <p class="text-xs text-slate-500">累计完成答题</p>
-                        <p class="mt-2 text-3xl font-bold text-slate-900">{{ summary.submitted_attempts }}</p>
+                        <p class="mt-2 text-3xl font-bold text-slate-900">
+                            {{ summary.submitted_attempts }}
+                        </p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
                         <p class="text-xs text-slate-500">满分次数</p>
-                        <p class="mt-2 text-3xl font-bold text-amber-500">{{ summary.perfect_attempts }}</p>
+                        <p class="mt-2 text-3xl font-bold text-amber-500">
+                            {{ summary.perfect_attempts }}
+                        </p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
                         <p class="text-xs text-slate-500">最快单题正确</p>
-                        <p class="mt-2 text-3xl font-bold text-sky-600">{{ summaryTime(summary.fastest_correct_seconds) }}</p>
+                        <p class="mt-2 text-3xl font-bold text-sky-600">
+                            {{ summaryTime(summary.fastest_correct_seconds) }}
+                        </p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div
+                        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
                         <p class="text-xs text-slate-500">最长连对</p>
-                        <p class="mt-2 text-3xl font-bold text-fuchsia-600">{{ summary.max_correct_streak }}</p>
+                        <p class="mt-2 text-3xl font-bold text-fuchsia-600">
+                            {{ summary.max_correct_streak }}
+                        </p>
                     </div>
                 </div>
 
@@ -270,20 +345,41 @@ onMounted(loadAchievements);
                     v-if="unlockedAchievements.length > 0"
                     class="rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-sky-50 p-5 shadow-sm"
                 >
-                    <p class="text-xs tracking-[0.2em] text-emerald-600 uppercase">荣耀展柜</p>
-                    <p class="mt-2 text-sm text-slate-600">优先展示你最近已具备代表性的核心徽章。</p>
+                    <p
+                        class="text-xs tracking-[0.2em] text-emerald-600 uppercase"
+                    >
+                        荣耀展柜
+                    </p>
+                    <p class="mt-2 text-sm text-slate-600">
+                        优先展示你最近已具备代表性的核心徽章。
+                    </p>
                     <div class="mt-4 flex flex-wrap gap-3">
                         <div
-                            v-for="achievement in unlockedAchievements.slice(0, 4)"
+                            v-for="achievement in unlockedAchievements.slice(
+                                0,
+                                4,
+                            )"
                             :key="`featured-${achievement.key}`"
                             class="achievement-chip flex items-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm"
                         >
-                            <span :class="['flex h-10 w-10 items-center justify-center rounded-2xl', iconToneClass(achievement.tone, true)]">
-                                <component :is="iconComponent(achievement.icon)" class="h-5 w-5" />
+                            <span
+                                :class="[
+                                    'flex h-10 w-10 items-center justify-center rounded-2xl',
+                                    iconToneClass(achievement.tone, true),
+                                ]"
+                            >
+                                <component
+                                    :is="iconComponent(achievement.icon)"
+                                    class="h-5 w-5"
+                                />
                             </span>
                             <div>
-                                <p class="text-sm font-semibold text-slate-900">{{ achievement.title }}</p>
-                                <p class="text-xs text-slate-500">{{ achievement.badge_label }}</p>
+                                <p class="text-sm font-semibold text-slate-900">
+                                    {{ achievement.title }}
+                                </p>
+                                <p class="text-xs text-slate-500">
+                                    {{ achievement.badge_label }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -297,7 +393,9 @@ onMounted(loadAchievements);
                         :class="[
                             toneClasses(achievement.tone, achievement.unlocked),
                         ]"
-                        :data-state="achievement.unlocked ? 'unlocked' : 'locked'"
+                        :data-state="
+                            achievement.unlocked ? 'unlocked' : 'locked'
+                        "
                         :style="{ animationDelay: `${index * 90}ms` }"
                     >
                         <div class="flex flex-col gap-4">
@@ -306,51 +404,107 @@ onMounted(loadAchievements);
                                     <span
                                         :class="[
                                             'flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl shadow-sm transition-transform duration-300',
-                                            iconToneClass(achievement.tone, achievement.unlocked),
+                                            iconToneClass(
+                                                achievement.tone,
+                                                achievement.unlocked,
+                                            ),
                                         ]"
                                     >
-                                        <component :is="iconComponent(achievement.icon)" class="h-7 w-7" />
+                                        <component
+                                            :is="
+                                                iconComponent(achievement.icon)
+                                            "
+                                            class="h-7 w-7"
+                                        />
                                     </span>
                                     <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-lg font-semibold text-slate-900">{{ achievement.title }}</p>
-                                            <span class="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                        <div
+                                            class="flex flex-wrap items-center gap-2"
+                                        >
+                                            <p
+                                                class="text-lg font-semibold text-slate-900"
+                                            >
+                                                {{ achievement.title }}
+                                            </p>
+                                            <span
+                                                class="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                                            >
                                                 {{ achievement.badge_label }}
                                             </span>
                                         </div>
-                                        <p class="mt-1 text-sm text-slate-600">{{ achievement.description }}</p>
+                                        <p class="mt-1 text-sm text-slate-600">
+                                            {{ achievement.description }}
+                                        </p>
                                     </div>
                                 </div>
                                 <span
                                     class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="achievement.unlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+                                    :class="
+                                        achievement.unlocked
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-slate-100 text-slate-500'
+                                    "
                                 >
-                                    {{ achievement.unlocked ? '已解锁' : '未解锁' }}
+                                    {{
+                                        achievement.unlocked
+                                            ? '已解锁'
+                                            : '未解锁'
+                                    }}
                                 </span>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <div class="flex items-center justify-between text-xs text-slate-500">
+                            <div
+                                class="flex items-center justify-between text-xs text-slate-500"
+                            >
                                 <span>当前进度</span>
                                 <span
                                     class="inline-flex items-baseline gap-0.5 text-sm font-semibold"
-                                    :class="progressDisplay(achievement).split ? '' : progressDisplay(achievement).highlightCompleted ? 'text-emerald-600' : 'text-slate-500'"
+                                    :class="
+                                        progressDisplay(achievement).split
+                                            ? ''
+                                            : progressDisplay(achievement)
+                                                    .highlightCompleted
+                                              ? 'text-emerald-600'
+                                              : 'text-slate-500'
+                                    "
                                 >
                                     <span
-                                        :class="progressDisplay(achievement).highlightCompleted ? 'text-emerald-600' : 'text-slate-500'"
+                                        :class="
+                                            progressDisplay(achievement)
+                                                .highlightCompleted
+                                                ? 'text-emerald-600'
+                                                : 'text-slate-500'
+                                        "
                                     >
-                                        {{ progressDisplay(achievement).completed }}
+                                        {{
+                                            progressDisplay(achievement)
+                                                .completed
+                                        }}
                                     </span>
-                                    <span v-if="progressDisplay(achievement).remaining" class="text-slate-400">
-                                        {{ progressDisplay(achievement).remaining }}
+                                    <span
+                                        v-if="
+                                            progressDisplay(achievement)
+                                                .remaining
+                                        "
+                                        class="text-slate-400"
+                                    >
+                                        {{
+                                            progressDisplay(achievement)
+                                                .remaining
+                                        }}
                                     </span>
                                 </span>
                             </div>
-                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80">
+                            <div
+                                class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80"
+                            >
                                 <div
                                     class="h-full rounded-full transition-all duration-700"
                                     :class="progressFillClass(achievement)"
-                                    :style="{ width: `${progressPercent(achievement)}%` }"
+                                    :style="{
+                                        width: `${progressPercent(achievement)}%`,
+                                    }"
                                 ></div>
                             </div>
                         </div>
@@ -395,7 +549,13 @@ onMounted(loadAchievements);
     position: absolute;
     inset: 1px;
     border-radius: 1.5rem;
-    background: linear-gradient(120deg, rgba(255, 255, 255, 0.14), transparent 32%, rgba(255, 255, 255, 0.26) 60%, transparent 80%);
+    background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.14),
+        transparent 32%,
+        rgba(255, 255, 255, 0.26) 60%,
+        transparent 80%
+    );
     transform: translateX(-120%);
     animation: badge-shine 3.2s ease-in-out infinite;
     pointer-events: none;
@@ -426,13 +586,15 @@ onMounted(loadAchievements);
         transform: translateX(-120%);
     }
 
-    45%, 100% {
+    45%,
+    100% {
         transform: translateX(120%);
     }
 }
 
 @keyframes badge-pulse {
-    0%, 100% {
+    0%,
+    100% {
         transform: translateY(0);
     }
 
@@ -441,4 +603,3 @@ onMounted(loadAchievements);
     }
 }
 </style>
-

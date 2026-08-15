@@ -24,9 +24,23 @@ class ActivityController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'mode']);
 
+        $currentActivityId = Activity::query()
+            ->where('enabled', true)
+            ->where(function ($query): void {
+                $query->whereNull('start_date')
+                    ->orWhere('start_date', '<=', now());
+            })
+            ->where(function ($query): void {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now());
+            })
+            ->latest('id')
+            ->value('id');
+
         return Inertia::render('Admin/Activities', [
             'activities' => $activities,
             'strategies' => $strategies,
+            'currentActivityId' => $currentActivityId,
         ]);
     }
 
@@ -47,7 +61,7 @@ class ActivityController extends Controller
             'activity_id' => $activity->id,
             'data' => $validated,
         ]);
-        return redirect()->route('admin.activities.index')->with('success', 'Activity created');
+        return redirect()->route('admin.activities.index')->with('success', '活动已创建');
     }
 
     public function update(Request $request, Activity $activity)
@@ -66,7 +80,7 @@ class ActivityController extends Controller
             'activity_id' => $activity->id,
             'data' => $validated,
         ]);
-        return redirect()->route('admin.activities.index')->with('success', 'Activity updated');
+        return redirect()->route('admin.activities.index')->with('success', '活动已更新');
     }
 
     public function toggleStatus(Activity $activity)
@@ -79,6 +93,6 @@ class ActivityController extends Controller
             'activity_id' => $activity->id,
             'enabled' => $activity->enabled,
         ]);
-        return redirect()->route('admin.activities.index')->with('success', 'Activity status updated');
+        return redirect()->route('admin.activities.index')->with('success', '活动状态已更新');
     }
 }

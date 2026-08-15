@@ -39,7 +39,7 @@ class SurveyQuestionController extends Controller
         $data['survey_template_id'] = $survey_template->id;
         $question = SurveyQuestion::create($data);
         Log::info('SurveyQuestion created', ['id' => $question->id, 'admin_id' => $request->user()->id]);
-        return redirect()->route('admin.survey_templates.questions.index', $survey_template);
+        return redirect()->route('admin.survey_questions.index', $survey_template);
     }
 
     public function edit(SurveyTemplate $survey_template, SurveyQuestion $survey_question)
@@ -61,13 +61,13 @@ class SurveyQuestionController extends Controller
         ]);
         $survey_question->update($data);
         Log::info('SurveyQuestion updated', ['id' => $survey_question->id, 'admin_id' => $request->user()->id]);
-        return redirect()->route('admin.survey_templates.questions.index', $survey_template);
+        return redirect()->route('admin.survey_questions.index', $survey_template);
     }
 
     public function destroy(SurveyTemplate $survey_template, SurveyQuestion $survey_question)
     {
         $survey_question->delete();
         Log::info('SurveyQuestion deleted', ['id' => $survey_question->id, 'admin_id' => auth()->id()]);
-        return redirect()->route('admin.survey_templates.questions.index', $survey_template);
+        return redirect()->route('admin.survey_questions.index', $survey_template);
     }
 }

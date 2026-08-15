@@ -88,6 +88,7 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
         ->withCount([
             'feedback as likes_count' => fn ($query) => $query->where('liked', true),
             'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+            'feedback as feedback_count' => fn ($query) => $query->whereNotNull('correction_text'),
         ])
         ->where('status', true)
         ->select(['id', 'content', 'type', 'options', 'explanation', 'option_explanations', 'tags']);
@@ -101,10 +102,33 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
         return response()->json([
             'data' => [],
             'message' => 'Activity is disabled.',
+            'activity' => [
+                'id' => $activity->id,
+                'name' => $activity->name,
+                'enabled' => false,
+            ],
         ]);
     }
 
     $strategy = $activity->paperStrategy;
+    $strategyPayload = fn () => $strategy ? [
+        'id' => $strategy->id,
+        'name' => $strategy->name,
+        'mode' => $strategy->mode,
+        'config_summary' => [
+            'count' => (int) (($strategy->config['count'] ?? 10)),
+            'has_tag_ratios' => isset($strategy->config['tag_ratios']) && is_array($strategy->config['tag_ratios']),
+            'fixed_question_count' => count($strategy->config['question_ids'] ?? []),
+        ],
+    ] : null;
+    $activityPayload = [
+        'id' => $activity->id,
+        'name' => $activity->name,
+        'description' => $activity->description,
+        'start_date' => $activity->start_date,
+        'end_date' => $activity->end_date,
+        'enabled' => $activity->enabled,
+    ];
 
     if (! $strategy || ! $strategy->status) {
         $questions = $fallbackQuestions();
@@ -112,6 +136,7 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
         return response()->json([
             'data' => $questions,
             'strategy' => null,
+            'activity' => $activityPayload,
         ]);
     }
 
@@ -143,11 +168,8 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
 
         return response()->json([
             'data' => $questions,
-            'strategy' => [
-                'id' => $strategy->id,
-                'name' => $strategy->name,
-                'mode' => $strategy->mode,
-            ],
+            'strategy' => $strategyPayload(),
+            'activity' => $activityPayload,
         ]);
     }
 
@@ -170,6 +192,7 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
                 ->withCount([
                     'feedback as likes_count' => fn ($query) => $query->where('liked', true),
                     'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+                    'feedback as feedback_count' => fn ($query) => $query->whereNotNull('correction_text'),
                 ])
                 ->where('status', true)
                 ->whereJsonContains('tags', $normalizedTag)
@@ -189,6 +212,7 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
                 ->withCount([
                     'feedback as likes_count' => fn ($query) => $query->where('liked', true),
                     'feedback as dislikes_count' => fn ($query) => $query->where('liked', false),
+                    'feedback as feedback_count' => fn ($query) => $query->whereNotNull('correction_text'),
                 ])
                 ->where('status', true)
                 ->whereNotIn('id', $selected->pluck('id'))
@@ -201,11 +225,8 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
 
         return response()->json([
             'data' => $selected,
-            'strategy' => [
-                'id' => $strategy->id,
-                'name' => $strategy->name,
-                'mode' => $strategy->mode,
-            ],
+            'strategy' => $strategyPayload(),
+            'activity' => $activityPayload,
         ]);
     }
 
@@ -218,11 +239,8 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
 
     return response()->json([
         'data' => $questions,
-        'strategy' => [
-            'id' => $strategy->id,
-            'name' => $strategy->name,
-            'mode' => $strategy->mode,
-        ],
+        'strategy' => $strategyPayload(),
+        'activity' => $activityPayload,
     ]);
 })->name('api.quiz.activities.questions');
 

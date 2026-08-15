@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\QuizAttempt;
-use App\Models\QuizAnswer;
 use App\Models\Question;
+use App\Models\QuizAnswer;
+use App\Models\QuizAttempt;
 use App\Services\QuizAchievementService;
 use App\Services\QuizShareService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class QuizAttemptController extends Controller
@@ -16,21 +17,29 @@ class QuizAttemptController extends Controller
     public function __construct(
         private readonly QuizAchievementService $achievementService,
         private readonly QuizShareService $quizShareService,
-    )
-    {
+    ) {
     }
 
     public function startAttempt(Request $request, $activity): JsonResponse
     {
+        $startedAt = now();
+        $expiresAt = $startedAt->copy()->addMinutes(30);
+
         $attempt = QuizAttempt::create([
             'activity_id' => $activity,
             'user_id' => $request->user()->id,
             'status' => 'in_progress',
-            'started_at' => now(),
-            'expires_at' => now()->addMinutes(30),
+            'started_at' => $startedAt,
+            'expires_at' => $expiresAt,
         ]);
 
-        return response()->json($attempt, 201);
+        return response()->json([
+            'id' => $attempt->id,
+            'activity_id' => (int) $attempt->activity_id,
+            'status' => $attempt->status,
+            'started_at' => $attempt->started_at,
+            'expires_at' => $attempt->expires_at,
+        ], 201);
     }
 
     public function saveAnswer(Request $request, $attempt, $question): JsonResponse
@@ -45,20 +54,17 @@ class QuizAttemptController extends Controller
         }
 
         $questionModel = Question::find($question);
-
         $payload = $request->input('answer');
-
         $isCorrect = $questionModel ? $this->determineCorrectness($questionModel, $payload) : false;
-        $awardedScore = $isCorrect ? 1 : 0;
 
         $answer = QuizAnswer::updateOrCreate(
             ['attempt_id' => $attempt, 'question_id' => $question],
             [
                 'answer_payload_json' => $payload,
                 'is_correct' => $isCorrect,
-                'awarded_score' => $awardedScore,
+                'awarded_score' => $isCorrect ? 1 : 0,
                 'answered_at' => now(),
-            ]
+            ],
         );
 
         return response()->json($answer);
@@ -67,7 +73,7 @@ class QuizAttemptController extends Controller
     public function submitAttempt(Request $request, $attempt): JsonResponse
     {
         $quizAttempt = QuizAttempt::find($attempt);
-        if (!$quizAttempt) {
+        if (! $quizAttempt) {
             return response()->json(['error' => 'Attempt not found'], 404);
         }
 
@@ -76,18 +82,26 @@ class QuizAttemptController extends Controller
         }
 
         if ($quizAttempt->submitted_at) {
-$quizAttempt->update(['anti_cheat_flags' => json_encode(['duplicate_submit' => true])]);
-            $antiCheatFlags = json_decode($quizAttempt->anti_cheat_flags, true) ?? [];
-            return response()->json(['error' => 'Attempt already submitted', 'anti_cheat_flags' => $antiCheatFlags], 409);
+            $antiCheatFlags = array_merge($quizAttempt->anti_cheat_flags ?? [], ['duplicate_submit' => true]);
+            $quizAttempt->update(['anti_cheat_flags' => $antiCheatFlags]);
+
+            return response()->json([
+                'error' => 'Attempt already submitted',
+                'anti_cheat_flags' => $antiCheatFlags,
+            ], 409);
         }
 
-        if (now()->greaterThan($quizAttempt->expires_at)) {
-$quizAttempt->update(['anti_cheat_flags' => json_encode(['expired_attempt' => true])]);
-            $antiCheatFlags = json_decode($quizAttempt->anti_cheat_flags, true) ?? [];
-return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $antiCheatFlags], 422);
+        if ($quizAttempt->expires_at && now()->greaterThan($quizAttempt->expires_at)) {
+            $antiCheatFlags = array_merge($quizAttempt->anti_cheat_flags ?? [], ['expired_attempt' => true]);
+            $quizAttempt->update(['anti_cheat_flags' => $antiCheatFlags]);
+
+            return response()->json([
+                'error' => 'Attempt expired',
+                'anti_cheat_flags' => $antiCheatFlags,
+            ], 422);
         }
 
-        DB::transaction(function () use ($quizAttempt) {
+        DB::transaction(function () use ($quizAttempt): void {
             $submittedAt = now();
 
             $quizAttempt->update([
@@ -100,7 +114,9 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
             ]);
         });
 
-        return response()->json($quizAttempt);
+        Cache::forget("leaderboard_{$quizAttempt->activity_id}");
+
+        return response()->json($quizAttempt->fresh());
     }
 
     public function getResult(Request $request, $attempt): JsonResponse
@@ -130,6 +146,7 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
             ->count();
 
         $achievementPayload = $this->achievementService->buildForUser($request->user(), $quizAttempt);
+        $wrongCount = max($totalQuestions - $correctCount, 0);
 
         return response()->json([
             'activity_id' => $quizAttempt->activity_id,
@@ -138,13 +155,13 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
             'anti_cheat_flags' => $quizAttempt->anti_cheat_flags,
             'total_questions' => $totalQuestions,
             'correct_count' => $correctCount,
-            'wrong_count' => max($totalQuestions - $correctCount, 0),
+            'wrong_count' => $wrongCount,
             'achievements' => $achievementPayload['data'],
             'newly_unlocked_achievements' => $achievementPayload['newly_unlocked'],
             'share' => $this->quizShareService->buildPublicShareData($quizAttempt, [
                 'total_questions' => $totalQuestions,
                 'correct_count' => $correctCount,
-                'wrong_count' => max($totalQuestions - $correctCount, 0),
+                'wrong_count' => $wrongCount,
             ]),
             'wrong_questions' => $wrongAnswers->map(function (QuizAnswer $answer): array {
                 $question = $answer->question;
@@ -172,16 +189,22 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
     {
         if ($question->type === 'text') {
             $submitted = is_array($payload) ? ($payload['value'] ?? '') : (string) $payload;
+
             return trim((string) $submitted) === trim((string) ($question->answer ?? ''));
         }
 
-        $selected = is_array($payload) ? ($payload['selected_option'] ?? null) : null;
+        $selected = is_array($payload) ? ($payload['selected_option'] ?? $payload['option'] ?? null) : null;
         if ($selected === null) {
             return false;
         }
 
-        $selectedValue = trim((string) $selected);
+        $selectedValue = $this->normalizeAnswerValue($selected);
         $correctValue = trim((string) ($question->answer ?? ''));
+
+        if ($question->type === 'multiple') {
+            return $this->normalizeMultipleAnswer($selectedValue)->all()
+                === $this->normalizeMultipleAnswer($correctValue)->all();
+        }
 
         if ($selectedValue === $correctValue) {
             return true;
@@ -190,36 +213,20 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
         $options = is_array($question->options) ? array_values($question->options) : [];
         $labelMap = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-        // Support answer saved as option text while client submits A/B/C labels.
         if (in_array($selectedValue, $labelMap, true) && $correctValue !== '') {
             $index = array_search($selectedValue, $labelMap, true);
-            if ($index !== false && isset($options[$index]) && trim((string) $options[$index]) === $correctValue) {
-                return true;
-            }
+
+            return $index !== false
+                && isset($options[$index])
+                && trim((string) $options[$index]) === $correctValue;
         }
 
-        // Support answer saved as A/B/C while client submits option text.
         if (! in_array($selectedValue, $labelMap, true) && in_array($correctValue, $labelMap, true)) {
             $index = array_search($correctValue, $labelMap, true);
-            if ($index !== false && isset($options[$index]) && trim((string) $options[$index]) === $selectedValue) {
-                return true;
-            }
-        }
 
-        if ($question->type === 'multiple') {
-            $submitted = collect(explode(',', $selectedValue))
-                ->map(fn ($value) => trim($value))
-                ->filter()
-                ->sort()
-                ->values();
-
-            $correct = collect(explode(',', $correctValue))
-                ->map(fn ($value) => trim($value))
-                ->filter()
-                ->sort()
-                ->values();
-
-            return $submitted->all() === $correct->all();
+            return $index !== false
+                && isset($options[$index])
+                && trim((string) $options[$index]) === $selectedValue;
         }
 
         return false;
@@ -245,7 +252,7 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
                 ? ($payload['selected_option'] ?? $payload['option'] ?? $payload['value'] ?? null)
                 : $payload);
 
-        $rawValue = trim((string) ($rawValue ?? ''));
+        $rawValue = $this->normalizeAnswerValue($rawValue);
         if ($rawValue === '') {
             return [
                 'label' => null,
@@ -258,12 +265,8 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
         $labelMap = ['A', 'B', 'C', 'D', 'E', 'F'];
 
         if ($question->type === 'multiple' || str_contains($rawValue, ',')) {
-            $parts = collect(explode(',', $rawValue))
-                ->map(fn ($value) => trim($value))
-                ->filter()
-                ->values();
-
-            $items = $parts->map(fn (string $value) => $this->normalizeSingleChoice($value, $options, $labelMap));
+            $items = collect(explode(',', $rawValue))
+                ->map(fn (string $value) => $this->normalizeSingleChoice(trim($value), $options, $labelMap));
 
             return [
                 'label' => $items->pluck('label')->filter()->implode('、') ?: null,
@@ -296,5 +299,29 @@ return response()->json(['error' => 'Attempt expired', 'anti_cheat_flags' => $an
             'text' => $value,
             'display' => $label ? sprintf('%s. %s', $label, $value) : $value,
         ];
+    }
+
+    private function normalizeAnswerValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return collect($value)
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->implode(',');
+        }
+
+        return trim((string) ($value ?? ''));
+    }
+
+    private function normalizeMultipleAnswer(string $value)
+    {
+        $decoded = json_decode($value, true);
+        $items = is_array($decoded) ? $decoded : explode(',', $value);
+
+        return collect($items)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->sort()
+            ->values();
     }
 }

@@ -10,18 +10,11 @@ use Tests\TestCase;
 
 class SurveyQuestionTest extends TestCase
 {
-    protected function extractInertia($html)
-    {
-        if (preg_match('/<div id="app" data-page="([^"]+)"/', $html, $matches)) {
-            return json_decode(html_entity_decode($matches[1]), true);
-        }
-        $this->fail('Could not extract Inertia payload from response.');
-    }
-
-    protected $admin;
-    protected $template;
-
     use RefreshDatabase;
+
+    protected User $admin;
+
+    protected SurveyTemplate $template;
 
     protected function setUp(): void
     {
@@ -30,16 +23,18 @@ class SurveyQuestionTest extends TestCase
         $this->template = SurveyTemplate::factory()->create();
     }
 
-    public function test_admin_can_list_survey_questions()
+    public function test_admin_can_list_survey_questions(): void
     {
         SurveyQuestion::factory()->count(2)->create(['survey_template_id' => $this->template->id]);
-        $response = $this->actingAs($this->admin, 'web')->get(route('admin.survey_templates.questions.index', $this->template));
-        $response->assertStatus(200);
-        $inertia = $this->extractInertia($response->getContent());
-$this->assertSame('Admin/SurveyQuestions', $inertia['component']);
+
+        $response = $this->actingAs($this->admin, 'web')
+            ->get(route('admin.survey_questions.index', $this->template));
+
+        $response->assertOk();
+        $this->assertSame('Admin/SurveyQuestions', $this->extractInertia($response->getContent())['component']);
     }
 
-    public function test_admin_can_create_survey_question()
+    public function test_admin_can_create_survey_question(): void
     {
         $data = [
             'content' => '您的年龄？',
@@ -48,12 +43,18 @@ $this->assertSame('Admin/SurveyQuestions', $inertia['component']);
             'required' => true,
             'order' => 1,
         ];
-        $response = $this->actingAs($this->admin, 'web')->post(route('admin.survey_templates.questions.store', $this->template), $data);
-        $response->assertRedirect(route('admin.survey_templates.questions.index', $this->template));
-        $this->assertDatabaseHas('survey_questions', ['content' => '您的年龄？', 'survey_template_id' => $this->template->id]);
+
+        $this->actingAs($this->admin, 'web')
+            ->post(route('admin.survey_questions.store', $this->template), $data)
+            ->assertRedirect(route('admin.survey_questions.index', $this->template));
+
+        $this->assertDatabaseHas('survey_questions', [
+            'content' => '您的年龄？',
+            'survey_template_id' => $this->template->id,
+        ]);
     }
 
-    public function test_admin_can_edit_survey_question()
+    public function test_admin_can_edit_survey_question(): void
     {
         $question = SurveyQuestion::factory()->create(['survey_template_id' => $this->template->id]);
         $data = [
@@ -63,22 +64,41 @@ $this->assertSame('Admin/SurveyQuestions', $inertia['component']);
             'required' => false,
             'order' => 2,
         ];
-        $response = $this->actingAs($this->admin, 'web')->put(route('admin.survey_templates.questions.update', [$this->template, $question]), $data);
-        $response->assertRedirect(route('admin.survey_templates.questions.index', $this->template));
-        $this->assertDatabaseHas('survey_questions', ['id' => $question->id, 'content' => '新问题', 'required' => false]);
+
+        $this->actingAs($this->admin, 'web')
+            ->put(route('admin.survey_questions.update', [$this->template, $question]), $data)
+            ->assertRedirect(route('admin.survey_questions.index', $this->template));
+
+        $this->assertDatabaseHas('survey_questions', [
+            'id' => $question->id,
+            'content' => '新问题',
+            'required' => false,
+        ]);
     }
 
-    public function test_admin_can_delete_survey_question()
+    public function test_admin_can_delete_survey_question(): void
     {
         $question = SurveyQuestion::factory()->create(['survey_template_id' => $this->template->id]);
-        $response = $this->actingAs($this->admin, 'web')->delete(route('admin.survey_templates.questions.destroy', [$this->template, $question]));
-        $response->assertRedirect();
+
+        $this->actingAs($this->admin, 'web')
+            ->delete(route('admin.survey_questions.destroy', [$this->template, $question]))
+            ->assertRedirect();
+
         $this->assertDatabaseMissing('survey_questions', ['id' => $question->id]);
     }
 
-    public function test_guest_cannot_access_survey_questions()
+    public function test_guest_cannot_access_survey_questions(): void
     {
-        $response = $this->get(route('admin.survey_templates.questions.index', $this->template));
-        $response->assertRedirect('/login');
+        $this->get(route('admin.survey_questions.index', $this->template))
+            ->assertRedirect('/login');
+    }
+
+    protected function extractInertia(string $html): array
+    {
+        if (preg_match('/<div id="app" data-page="([^"]+)"/', $html, $matches)) {
+            return json_decode(html_entity_decode($matches[1]), true);
+        }
+
+        $this->fail('Could not extract Inertia payload from response.');
     }
 }

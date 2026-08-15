@@ -21,6 +21,8 @@ class QuizAttemptTest extends TestCase
         $response = $this->postJson('/api/quiz/activities/1/attempts');
 
         $response->assertStatus(201);
+        $response->assertJsonStructure(['id', 'activity_id', 'status', 'started_at', 'expires_at']);
+        $response->assertJsonPath('activity_id', 1);
         $this->assertDatabaseHas('quiz_attempts', [
             'activity_id' => 1,
             'user_id' => $user->id,
@@ -61,11 +63,37 @@ class QuizAttemptTest extends TestCase
     $response->assertJson(['error' => 'Attempt not found']);
 }
 
+    public function test_save_multiple_choice_answer_from_array_payload(): void
+    {
+        $user = User::factory()->withoutTwoFactor()->create();
+        $question = Question::factory()->create([
+            'type' => 'multiple',
+            'options' => ['Enable 2FA', 'Reuse passwords', 'Update systems', 'Disable alerts'],
+            'answer' => 'A,C',
+        ]);
+        $attempt = QuizAttempt::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user, 'api');
+
+        $response = $this->putJson("/api/quiz/attempts/{$attempt->id}/answers/{$question->id}", [
+            'answer' => ['selected_option' => ['C', 'A']],
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('quiz_answers', [
+            'attempt_id' => $attempt->id,
+            'question_id' => $question->id,
+            'is_correct' => true,
+            'awarded_score' => 1,
+        ]);
+    }
+
     public function test_submit_attempt(): void
     {
         $user = User::factory()->withoutTwoFactor()->create();
         $attempt = QuizAttempt::factory()->create(['user_id' => $user->id, 'expires_at' => now()->addMinutes(10)]);
         $this->actingAs($user, 'api');
+        cache()->put("leaderboard_{$attempt->activity_id}", [['score' => 1]], 600);
 
         $response = $this->postJson("/api/quiz/attempts/{$attempt->id}/submit");
         $response->assertStatus(200);
@@ -73,6 +101,7 @@ class QuizAttemptTest extends TestCase
             'id' => $attempt->id,
             'status' => 'submitted',
         ]);
+        $this->assertFalse(cache()->has("leaderboard_{$attempt->activity_id}"));
 
         $nonOwner = User::factory()->create();
         $this->actingAs($nonOwner, 'api');

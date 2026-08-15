@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Question;
 use App\Models\QuestionTag;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Auth;
 
 class QuestionController extends Controller
 {
@@ -19,11 +19,17 @@ class QuestionController extends Controller
         $this->syncManagedTagsFromQuestions();
 
         $filters = $request->validate([
+            'q' => 'nullable|string|max:120',
             'tag' => 'nullable|string|max:50',
-            'sort' => 'nullable|in:latest,likes_desc,feedback_desc',
+            'type' => 'nullable|in:single,multiple,text',
+            'status' => 'nullable|in:active,inactive',
+            'sort' => 'nullable|in:latest,likes_desc,feedback_desc,oldest',
         ]);
 
+        $keyword = trim((string) ($filters['q'] ?? ''));
         $selectedTag = trim((string) ($filters['tag'] ?? ''));
+        $selectedType = (string) ($filters['type'] ?? '');
+        $selectedStatus = (string) ($filters['status'] ?? '');
         $sort = (string) ($filters['sort'] ?? 'latest');
 
         $questionsQuery = Question::query()
@@ -39,23 +45,45 @@ class QuestionController extends Controller
                     ->with('user:id,name'),
             ]);
 
+        if ($keyword !== '') {
+            $questionsQuery->where(function ($query) use ($keyword): void {
+                $query->where('content', 'like', "%{$keyword}%")
+                    ->orWhere('answer', 'like', "%{$keyword}%")
+                    ->orWhere('explanation', 'like', "%{$keyword}%");
+            });
+        }
+
         if ($selectedTag !== '') {
             $questionsQuery->whereJsonContains('tags', $selectedTag);
+        }
+
+        if ($selectedType !== '') {
+            $questionsQuery->where('type', $selectedType);
+        }
+
+        if ($selectedStatus !== '') {
+            $questionsQuery->where('status', $selectedStatus === 'active');
         }
 
         match ($sort) {
             'likes_desc' => $questionsQuery->orderByDesc('likes_count')->orderByDesc('id'),
             'feedback_desc' => $questionsQuery->orderByDesc('feedback_count')->orderByDesc('id'),
+            'oldest' => $questionsQuery->orderBy('id'),
             default => $questionsQuery->orderByDesc('id'),
         };
 
-        $questions = $questionsQuery->get();
+        $questions = $questionsQuery
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('Admin/Questions', [
             'questions' => $questions,
             'availableTags' => $this->availableTags(),
             'filters' => [
+                'q' => $keyword,
                 'tag' => $selectedTag,
+                'type' => $selectedType,
+                'status' => $selectedStatus,
                 'sort' => $sort,
             ],
         ]);
@@ -85,6 +113,7 @@ class QuestionController extends Controller
             'status' => 'nullable|boolean',
         ]);
 
+        $validated['status'] = (bool) ($validated['status'] ?? true);
         $validated['tags'] = QuestionTag::normalizeNames($validated['tags'] ?? []);
         QuestionTag::syncNames($validated['tags']);
 
@@ -113,6 +142,10 @@ class QuestionController extends Controller
             'tags.*' => 'string|max:50',
             'status' => 'nullable|boolean',
         ]);
+
+        if (array_key_exists('status', $validated)) {
+            $validated['status'] = (bool) $validated['status'];
+        }
 
         if (array_key_exists('tags', $validated)) {
             $validated['tags'] = QuestionTag::normalizeNames($validated['tags'] ?? []);
