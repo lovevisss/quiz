@@ -7,6 +7,10 @@ test.describe('quiz flow', () => {
         await page.goto('/quiz');
         await page.waitForSelector('[data-testid="activity-home"]');
         await expect(page.getByTestId('activity-home')).toBeVisible();
+        await expect(page.getByTestId('quiz-cas-start-link')).toHaveAttribute(
+            'href',
+            /\/auth\/cas\/redirect\?return=/,
+        );
 
         await page.goto('/quiz/question');
         await expect(page.getByTestId('quiz-question-card')).toBeVisible();
@@ -25,7 +29,9 @@ test.describe('quiz flow', () => {
         await expect(page.getByTestId('certificate-page')).toBeVisible();
     });
 
-    test('keeps fixed actions visible on mobile viewports', async ({ page }) => {
+    test('keeps fixed actions visible on mobile viewports', async ({
+        page,
+    }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/quiz/question');
         await page.screenshot({
@@ -36,7 +42,9 @@ test.describe('quiz flow', () => {
         await expect(page.getByTestId('next-button')).toBeVisible();
 
         await page.goto('/quiz/result');
-        await expect(page.getByRole('button', { name: /重新获取/ })).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: /重新获取/ }),
+        ).toBeVisible();
     });
 
     test('shows error on invalid quiz page', async ({ page }) => {

@@ -38,10 +38,8 @@ const questionHref = computed(() => {
 
     return `${quizRoutes.question().url}?activity=${activity.value.id}`;
 });
-const startHref = computed(() =>
-    isAuthenticated.value
-        ? questionHref.value
-        : `/auth/cas/redirect?return=${encodeURIComponent(questionHref.value)}`,
+const casStartHref = computed(
+    () => `/auth/cas/redirect?return=${encodeURIComponent(questionHref.value)}`,
 );
 
 const activityPeriod = computed(() => {
@@ -195,13 +193,23 @@ onMounted(loadCurrentActivity);
                     {{ loading ? '正在加载活动...' : '暂无可参与活动' }}
                 </button>
                 <Link
-                    v-else
-                    :href="startHref"
+                    v-else-if="isAuthenticated"
+                    data-testid="quiz-start-link"
+                    :href="questionHref"
                     class="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
                 >
-                    {{ isAuthenticated ? '开始答题' : '登录后开始答题' }}
+                    开始答题
                     <ChevronRight class="h-4 w-4" />
                 </Link>
+                <a
+                    v-else
+                    data-testid="quiz-cas-start-link"
+                    :href="casStartHref"
+                    class="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
+                >
+                    登录后开始答题
+                    <ChevronRight class="h-4 w-4" />
+                </a>
             </div>
         </div>
     </main>
