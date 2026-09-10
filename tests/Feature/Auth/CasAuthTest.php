@@ -62,5 +62,29 @@ class CasAuthTest extends TestCase
             'student_id' => '20240001',
         ]);
     }
-}
 
+    public function test_callback_returns_to_quiz_question_after_successful_login(): void
+    {
+        config()->set('cas.auto_register', true);
+
+        $casClient = Mockery::mock(CasClient::class);
+        $casClient
+            ->shouldReceive('validateTicket')
+            ->once()
+            ->andReturn([
+                'username' => '20240002',
+                'attributes' => [
+                    'gh' => '20240002',
+                    'name' => 'Quiz Student',
+                    'email' => '20240002@zufedfc.edu.cn',
+                ],
+            ]);
+
+        $this->app->instance(CasClient::class, $casClient);
+
+        $response = $this->get('/auth/cas/callback?ticket=ST-2-test&return='.urlencode('/quiz/question?activity=88'));
+
+        $response->assertRedirect('/quiz/question?activity=88');
+        $this->assertAuthenticated();
+    }
+}

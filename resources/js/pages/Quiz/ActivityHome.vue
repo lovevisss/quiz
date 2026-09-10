@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import quizRoutes from '@/routes/quiz';
-import { Link } from '@inertiajs/vue3';
+import type { AppPageProps } from '@/types';
+import { Link, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import {
     CalendarDays,
@@ -26,8 +27,10 @@ type CurrentActivity = {
 const loading = ref(true);
 const activity = ref<CurrentActivity | null>(null);
 const error = ref('');
+const page = usePage<AppPageProps>();
 
 const canStart = computed(() => Boolean(activity.value));
+const isAuthenticated = computed(() => Boolean(page.props.auth.user));
 const questionHref = computed(() => {
     if (!activity.value) {
         return quizRoutes.question().url;
@@ -35,6 +38,11 @@ const questionHref = computed(() => {
 
     return `${quizRoutes.question().url}?activity=${activity.value.id}`;
 });
+const startHref = computed(() =>
+    isAuthenticated.value
+        ? questionHref.value
+        : `/auth/cas/redirect?return=${encodeURIComponent(questionHref.value)}`,
+);
 
 const activityPeriod = computed(() => {
     if (!activity.value?.start_date && !activity.value?.end_date) {
@@ -188,10 +196,10 @@ onMounted(loadCurrentActivity);
                 </button>
                 <Link
                     v-else
-                    :href="questionHref"
+                    :href="startHref"
                     class="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
                 >
-                    开始答题
+                    {{ isAuthenticated ? '开始答题' : '登录后开始答题' }}
                     <ChevronRight class="h-4 w-4" />
                 </Link>
             </div>

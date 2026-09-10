@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Activity;
 use App\Models\PaperStrategy;
 use App\Models\Question;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -25,6 +26,7 @@ class QuizActivityTest extends TestCase
 
     public function test_it_returns_questions_by_fixed_paper_strategy(): void
     {
+        $user = User::factory()->create();
         $question1 = Question::factory()->create();
         $question2 = Question::factory()->create();
 
@@ -44,7 +46,7 @@ class QuizActivityTest extends TestCase
             'paper_strategy_id' => $strategy->id,
         ]);
 
-        $response = $this->getJson('/api/quiz/activities/'.$activity->id.'/questions');
+        $response = $this->actingAs($user)->getJson('/api/quiz/activities/'.$activity->id.'/questions');
 
         $response->assertOk();
         $response->assertJsonPath('strategy.id', $strategy->id);

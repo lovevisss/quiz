@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleAppearance;
+use App\Http\Middleware\EnsureQuizAuthenticated;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'quiz.auth' => EnsureQuizAuthenticated::class,
             'role' => EnsureUserHasRole::class,
         ]);
 

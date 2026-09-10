@@ -37,7 +37,7 @@ Route::post('api/friend-requests/{user}/reject', [\App\Http\Controllers\Api\Frie
 Route::prefix('quiz')->group(function () {
     Route::post('/participate', [\App\Http\Controllers\QuizController::class, 'participate'])->name('quiz.participate');
     Route::inertia('/', 'Quiz/ActivityHome')->name('quiz.index');
-    Route::inertia('/question', 'Quiz/Question')->name('quiz.question');
+    Route::inertia('/question', 'Quiz/Question')->middleware('quiz.auth')->name('quiz.question');
     Route::inertia('/result', 'Quiz/Result')->name('quiz.result');
     Route::inertia('/leaderboard', 'Quiz/Leaderboard')->name('quiz.leaderboard');
     Route::inertia('/certificate', 'Quiz/Certificate')->name('quiz.certificate');

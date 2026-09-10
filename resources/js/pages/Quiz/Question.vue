@@ -61,7 +61,6 @@ const progressPercent = computed(() =>
         ? 0
         : Math.round((currentNumber.value / totalQuestions.value) * 100),
 );
-const isPreviewMode = computed(() => !attemptId.value);
 const remainingSeconds = computed(() => {
     if (!expiresAt.value) {
         return null;
@@ -151,6 +150,23 @@ function initializeFeedbackStats(items: QuizQuestion[]): void {
     );
 }
 
+function casLoginHref(
+    returnTo = window.location.pathname + window.location.search,
+): string {
+    return `/auth/cas/redirect?return=${encodeURIComponent(returnTo)}`;
+}
+
+function redirectToCasLogin(): void {
+    window.location.assign(casLoginHref());
+}
+
+function isAuthError(error: unknown): boolean {
+    return (
+        axios.isAxiosError(error) &&
+        [401, 419].includes(Number(error.response?.status))
+    );
+}
+
 async function resolveActivityId(): Promise<number | null> {
     const fromQuery = Number(
         new URLSearchParams(window.location.search).get('activity'),
@@ -190,26 +206,25 @@ async function loadQuestions(): Promise<void> {
         initializeFeedbackStats(questions.value);
         currentIndex.value = 0;
 
-        try {
-            const attemptResponse = await axios.post(
-                `/api/quiz/activities/${activityId.value}/attempts`,
-            );
-            attemptId.value = Number(attemptResponse.data?.id ?? 0) || null;
-            expiresAt.value = attemptResponse.data?.expires_at ?? null;
-        } catch {
-            attemptId.value = null;
-            expiresAt.value = null;
-            notice.value =
-                '当前为预览模式。登录后开始答题可保存成绩和参与排行榜。';
-        }
+        const attemptResponse = await axios.post(
+            `/api/quiz/activities/${activityId.value}/attempts`,
+        );
+        attemptId.value = Number(attemptResponse.data?.id ?? 0) || null;
+        expiresAt.value = attemptResponse.data?.expires_at ?? null;
 
         if (questions.value.length === 0) {
             error.value = '当前活动暂时没有题目。';
         }
-    } catch {
+    } catch (caughtError) {
         questions.value = [];
         attemptId.value = null;
-        error.value = '题目加载失败，请稍后重试。';
+
+        if (isAuthError(caughtError)) {
+            redirectToCasLogin();
+            return;
+        }
+
+        error.value = '答题初始化失败，请稍后重试。';
     } finally {
         loading.value = false;
     }
@@ -269,7 +284,8 @@ function currentAnswerPayload(): Record<string, unknown> | null {
 
 async function persistCurrentAnswer(): Promise<boolean> {
     if (!attemptId.value || !currentQuestion.value) {
-        return true;
+        redirectToCasLogin();
+        return false;
     }
 
     const answer = currentAnswerPayload();
@@ -278,10 +294,20 @@ async function persistCurrentAnswer(): Promise<boolean> {
         return false;
     }
 
-    await axios.put(
-        `/api/quiz/attempts/${attemptId.value}/answers/${currentQuestion.value.id}`,
-        { answer },
-    );
+    try {
+        await axios.put(
+            `/api/quiz/attempts/${attemptId.value}/answers/${currentQuestion.value.id}`,
+            { answer },
+        );
+    } catch (caughtError) {
+        if (isAuthError(caughtError)) {
+            redirectToCasLogin();
+            return false;
+        }
+
+        throw caughtError;
+    }
+
     return true;
 }
 
@@ -321,11 +347,21 @@ async function goNext(): Promise<void> {
         }
 
         if (!attemptId.value) {
-            error.value = '当前为预览模式，登录后才能提交成绩。';
+            redirectToCasLogin();
             return;
         }
 
-        await axios.post(`/api/quiz/attempts/${attemptId.value}/submit`);
+        try {
+            await axios.post(`/api/quiz/attempts/${attemptId.value}/submit`);
+        } catch (caughtError) {
+            if (isAuthError(caughtError)) {
+                redirectToCasLogin();
+                return;
+            }
+
+            throw caughtError;
+        }
+
         router.visit(resultHref());
     } catch {
         error.value = '提交失败，请检查网络后重试。';
@@ -412,11 +448,6 @@ onUnmounted(() => {
                     </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
-                    <span
-                        v-if="isPreviewMode"
-                        class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"
-                        >预览</span
-                    >
                     <span
                         class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
                     >

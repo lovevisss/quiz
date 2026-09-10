@@ -242,7 +242,7 @@ Route::get('quiz/activities/{activity}/questions', function (\App\Models\Activit
         'strategy' => $strategyPayload(),
         'activity' => $activityPayload,
     ]);
-})->name('api.quiz.activities.questions');
+})->middleware(['web', 'auth:api,web'])->name('api.quiz.activities.questions');
 
 Route::middleware(['web', 'auth'])->group(function (): void {
     Route::get('/roles', [RoleController::class, 'index'])->name('api.roles.index');
