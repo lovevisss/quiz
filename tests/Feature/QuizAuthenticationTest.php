@@ -30,6 +30,13 @@ class QuizAuthenticationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_quiz_pages_include_csrf_token_meta(): void
+    {
+        $this->get('/quiz')
+            ->assertOk()
+            ->assertSee('name="csrf-token"', false);
+    }
+
     public function test_guest_cannot_fetch_activity_questions(): void
     {
         $activity = Activity::factory()->create([

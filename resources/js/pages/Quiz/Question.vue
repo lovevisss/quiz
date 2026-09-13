@@ -150,17 +150,46 @@ function initializeFeedbackStats(items: QuizQuestion[]): void {
     );
 }
 
-function casLoginHref(
-    returnTo = window.location.pathname + window.location.search,
-): string {
-    return `/auth/cas/redirect?return=${encodeURIComponent(returnTo)}`;
+function reloadProtectedQuestionPage(): void {
+    window.location.assign(window.location.pathname + window.location.search);
 }
 
-function redirectToCasLogin(): void {
-    window.location.assign(casLoginHref());
+function errorStatus(error: unknown): number | null {
+    return axios.isAxiosError(error) ? Number(error.response?.status) : null;
 }
 
-function isAuthError(error: unknown): boolean {
+function isUnauthorizedError(error: unknown): boolean {
+    return errorStatus(error) === 401;
+}
+
+function isCsrfError(error: unknown): boolean {
+    return errorStatus(error) === 419;
+}
+
+function handleCsrfRefresh(): void {
+    error.value = '登录状态已刷新，请重新点击开始答题。';
+    notice.value = '';
+}
+
+function handleSessionExpired(): void {
+    reloadProtectedQuestionPage();
+}
+
+function handleRecoverableAuthError(error: unknown): boolean {
+    if (isCsrfError(error)) {
+        handleCsrfRefresh();
+        return true;
+    }
+
+    if (isUnauthorizedError(error)) {
+        handleSessionExpired();
+        return true;
+    }
+
+    return false;
+}
+
+function isFeedbackAuthError(error: unknown): boolean {
     return (
         axios.isAxiosError(error) &&
         [401, 419].includes(Number(error.response?.status))
@@ -219,8 +248,7 @@ async function loadQuestions(): Promise<void> {
         questions.value = [];
         attemptId.value = null;
 
-        if (isAuthError(caughtError)) {
-            redirectToCasLogin();
+        if (handleRecoverableAuthError(caughtError)) {
             return;
         }
 
@@ -284,7 +312,7 @@ function currentAnswerPayload(): Record<string, unknown> | null {
 
 async function persistCurrentAnswer(): Promise<boolean> {
     if (!attemptId.value || !currentQuestion.value) {
-        redirectToCasLogin();
+        handleSessionExpired();
         return false;
     }
 
@@ -300,8 +328,7 @@ async function persistCurrentAnswer(): Promise<boolean> {
             { answer },
         );
     } catch (caughtError) {
-        if (isAuthError(caughtError)) {
-            redirectToCasLogin();
+        if (handleRecoverableAuthError(caughtError)) {
             return false;
         }
 
@@ -347,15 +374,14 @@ async function goNext(): Promise<void> {
         }
 
         if (!attemptId.value) {
-            redirectToCasLogin();
+            handleSessionExpired();
             return;
         }
 
         try {
             await axios.post(`/api/quiz/attempts/${attemptId.value}/submit`);
         } catch (caughtError) {
-            if (isAuthError(caughtError)) {
-                redirectToCasLogin();
+            if (handleRecoverableAuthError(caughtError)) {
                 return;
             }
 
@@ -392,8 +418,10 @@ async function setLike(liked: boolean): Promise<void> {
         feedbackMessage.value = liked
             ? '已记录喜欢这道题。'
             : '已记录你的反馈。';
-    } catch {
-        feedbackMessage.value = '评价提交失败，请稍后重试。';
+    } catch (caughtError) {
+        feedbackMessage.value = isFeedbackAuthError(caughtError)
+            ? '登录状态已刷新，请重新进入答题页后再操作。'
+            : '评价提交失败，请稍后重试。';
     }
 }
 
@@ -411,8 +439,10 @@ async function submitCorrection(): Promise<void> {
         );
         correctionText.value = '';
         feedbackMessage.value = '纠错反馈已提交，感谢你的帮助。';
-    } catch {
-        feedbackMessage.value = '纠错提交失败，请稍后重试。';
+    } catch (caughtError) {
+        feedbackMessage.value = isFeedbackAuthError(caughtError)
+            ? '登录状态已刷新，请重新进入答题页后再操作。'
+            : '纠错提交失败，请稍后重试。';
     }
 }
 
