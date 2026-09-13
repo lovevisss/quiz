@@ -12,7 +12,7 @@ import { initializeTheme } from './composables/useAppearance';
 import { createClientRouter } from './router';
 import store from './store';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || '浙江财经大学东方学院';
 const router = createClientRouter();
 
 createInertiaApp({

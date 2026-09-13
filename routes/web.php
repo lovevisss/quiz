@@ -13,6 +13,12 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', function () {
+    $user = request()->user();
+
+    if (! $user?->is_admin && ! $user?->hasRole('admin')) {
+        return redirect()->route('quiz.index');
+    }
+
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 

@@ -494,13 +494,6 @@ onUnmounted(() => {
                                       : '单选题'
                             }}
                         </span>
-                        <span
-                            v-for="tag in currentQuestion.tags ?? []"
-                            :key="tag"
-                            class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600"
-                        >
-                            {{ tag }}
-                        </span>
                     </div>
                     <h1
                         class="mt-4 text-lg leading-8 font-bold text-slate-950 sm:text-xl"

@@ -71,7 +71,7 @@ export function createClientRouter() {
             document.title =
                 to.meta.title +
                 ' - ' +
-                (import.meta.env.VITE_APP_NAME || 'Laravel');
+                (import.meta.env.VITE_APP_NAME || '浙江财经大学东方学院');
         }
     });
 

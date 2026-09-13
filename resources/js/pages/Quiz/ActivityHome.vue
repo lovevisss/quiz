@@ -98,6 +98,11 @@ onMounted(loadCurrentActivity);
                                 '完成答题后可查看成绩、错题解析、排行榜和证书。界面已针对手机端操作优化。'
                             }}
                         </p>
+                        <p
+                            class="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500"
+                        >
+                            本程序由 AI 辅助生成
+                        </p>
                     </div>
                     <span
                         class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
