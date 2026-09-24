@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import adminActivities from '@/routes/admin/activities';
-import { router, useForm, usePage } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 type ActivityItem = {
@@ -92,6 +92,33 @@ function toggleStatus(activity: ActivityItem): void {
     );
 }
 
+function deleteActivity(activity: ActivityItem): void {
+    if (
+        !window.confirm(
+            `确定删除活动「${activity.name}」吗？该活动的答题、排名、问卷、证书和抽奖记录也会永久删除。`,
+        )
+    ) {
+        return;
+    }
+
+    router.delete(`/admin/activities/${activity.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (editingId.value === activity.id) {
+                resetForm();
+            }
+        },
+    });
+}
+
+function hasEnded(activity: ActivityItem): boolean {
+    return Boolean(
+        activity.end_date &&
+            new Date(`${formatDate(activity.end_date)}T23:59:59`).getTime() <
+                Date.now(),
+    );
+}
+
 function formatDate(value: string | null): string {
     if (!value) {
         return '';
@@ -118,7 +145,7 @@ function strategyLabel(activity: ActivityItem): string {
                 <div>
                     <h1 class="text-2xl font-bold text-slate-950">活动管理</h1>
                     <p class="mt-1 text-sm text-slate-600">
-                        创建、编辑、启停答题活动，并绑定组卷策略。
+                        创建、编辑、启停答题活动，查看排名并清理测试活动。
                     </p>
                 </div>
                 <span
@@ -279,6 +306,11 @@ function strategyLabel(activity: ActivityItem): string {
                                 >
                                     {{ activity.enabled ? '启用' : '停用' }}
                                 </span>
+                                <span
+                                    v-if="hasEnded(activity)"
+                                    class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                                    >已结束</span
+                                >
                             </div>
                             <p class="mt-2 text-sm leading-6 text-slate-600">
                                 {{ activity.description || '暂无描述' }}
@@ -297,6 +329,11 @@ function strategyLabel(activity: ActivityItem): string {
                             </div>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">
+                            <Link
+                                :href="`/admin/activities/${activity.id}/leaderboard`"
+                                class="rounded border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800"
+                                >排名清单</Link
+                            >
                             <button
                                 type="button"
                                 class="rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
@@ -315,6 +352,13 @@ function strategyLabel(activity: ActivityItem): string {
                                 @click="toggleStatus(activity)"
                             >
                                 {{ activity.enabled ? '停用' : '启用' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded border border-red-300 px-4 py-2 text-sm font-semibold text-red-700"
+                                @click="deleteActivity(activity)"
+                            >
+                                删除
                             </button>
                         </div>
                     </div>

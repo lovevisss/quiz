@@ -54,8 +54,10 @@ Route::prefix('quiz')->group(function () {
 
 Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('activities', [\App\Http\Controllers\Admin\ActivityController::class, 'index'])->name('admin.activities.index');
+    Route::get('activities/{activity}/leaderboard', [\App\Http\Controllers\Admin\ActivityController::class, 'leaderboard'])->name('admin.activities.leaderboard');
     Route::post('activities', [\App\Http\Controllers\Admin\ActivityController::class, 'store'])->name('admin.activities.store');
     Route::put('activities/{activity}', [\App\Http\Controllers\Admin\ActivityController::class, 'update'])->name('admin.activities.update');
+    Route::delete('activities/{activity}', [\App\Http\Controllers\Admin\ActivityController::class, 'destroy'])->name('admin.activities.destroy');
     Route::patch('activities/{activity}/toggle-status', [\App\Http\Controllers\Admin\ActivityController::class, 'toggleStatus'])->name('admin.activities.toggle-status');
 
     Route::get('questions', [\App\Http\Controllers\Admin\QuestionController::class, 'index'])->name('admin.questions.index');

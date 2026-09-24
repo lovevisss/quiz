@@ -3,15 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\LeaderboardController;
 use App\Models\Activity;
 use App\Models\PaperStrategy;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
 class ActivityController extends Controller
 {
+    public function leaderboard(Activity $activity)
+    {
+        return Inertia::render('Admin/ActivityLeaderboard', [
+            'activity' => $activity->only(['id', 'name', 'start_date', 'end_date']),
+            'rows' => LeaderboardController::cachedLeaderboard($activity->id),
+        ]);
+    }
+
     public function index()
     {
         $activities = Activity::query()
@@ -94,5 +105,29 @@ class ActivityController extends Controller
             'enabled' => $activity->enabled,
         ]);
         return redirect()->route('admin.activities.index')->with('success', '活动状态已更新');
+    }
+
+    public function destroy(Activity $activity)
+    {
+        DB::transaction(function () use ($activity): void {
+            DB::table('quiz_answers')->whereIn('attempt_id', function ($query) use ($activity): void {
+                $query->select('id')->from('quiz_attempts')->where('activity_id', $activity->id);
+            })->delete();
+            DB::table('quiz_lottery_draws')->where('activity_id', $activity->id)->delete();
+            DB::table('quiz_lottery_entries')->where('activity_id', $activity->id)->delete();
+            DB::table('quiz_certificates')->where('activity_id', $activity->id)->delete();
+            DB::table('survey_responses')->where('activity_id', $activity->id)->delete();
+            DB::table('surveys')->where('activity_id', $activity->id)->delete();
+            DB::table('quiz_attempts')->where('activity_id', $activity->id)->delete();
+            $activity->delete();
+        });
+
+        Cache::forget("leaderboard_{$activity->id}");
+        Log::info('Admin deleted activity', [
+            'admin_id' => Auth::id(),
+            'activity_id' => $activity->id,
+        ]);
+
+        return redirect()->route('admin.activities.index')->with('success', '活动及关联记录已删除');
     }
 }

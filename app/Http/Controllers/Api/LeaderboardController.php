@@ -46,7 +46,8 @@ class LeaderboardController extends Controller
             ->orderByDesc('score')
             ->orderBy('duration_seconds')
             ->orderBy('submitted_at')
-            ->get(['user_id', 'score', 'duration_seconds', 'submitted_at']);
+            ->get(['user_id', 'score', 'duration_seconds', 'submitted_at'])
+            ->unique('user_id');
 
         $attemptsArr = [];
 
